@@ -155,75 +155,7 @@ export default function LoginPage({ onLogin, onGuestPublic }) {
           </p>
         </div>
 
-        {/* Workflow Explainer Card: HOW IT WORKS */}
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '16px',
-          border: '1px solid #e2e8f0',
-          padding: '24px 28px',
-          marginBottom: '32px',
-          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -2px rgba(0,0,0,0.02)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ backgroundColor: '#eff6ff', color: '#2563eb', padding: '6px', borderRadius: '8px' }}>
-                <Sparkles size={18} />
-              </div>
-              <h2 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a' }}>
-                How VerifyMET+ Solves Integrity & Tampering in 4 Connected Roles
-              </h2>
-            </div>
-            <span style={{ fontSize: '0.78rem', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 10px', borderRadius: '6px', fontWeight: '500' }}>
-              SIH Problem Statement ID: 26036
-            </span>
-          </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-            gap: '14px'
-          }}>
-            <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <span style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#2563eb', color: '#fff', fontSize: '0.7rem', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</span>
-                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#1e40af' }}>Merchant Registers</span>
-              </div>
-              <p style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.4 }}>
-                Owner registers weighing machine with model, serial number & mandatory photo of the physical nameplate.
-              </p>
-            </div>
-
-            <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <span style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#059669', color: '#fff', fontSize: '0.7rem', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>2</span>
-                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#065f46' }}>Blind Allocation</span>
-              </div>
-              <p style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.4 }}>
-                Anti-collusion algorithm automatically assigns an inspector based on weighted random distribution. No officer-merchant collusion.
-              </p>
-            </div>
-
-            <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <span style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#d97706', color: '#fff', fontSize: '0.7rem', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>3</span>
-                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#92400e' }}>Proof of Presence</span>
-              </div>
-              <p style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.4 }}>
-                Inspector visits shop. Live camera viewfinder and GPS location enforce physical presence. Nameplate side-by-side match verified.
-              </p>
-            </div>
-
-            <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <span style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#7c3aed', color: '#fff', fontSize: '0.7rem', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>4</span>
-                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#5b21b6' }}>QR Seal & Audit</span>
-              </div>
-              <p style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.4 }}>
-                Cryptographic SHA-256 block chains the test result. Tamper-evident QR code issued. Citizens can scan & file complaints without login.
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* Login Method Selector */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
