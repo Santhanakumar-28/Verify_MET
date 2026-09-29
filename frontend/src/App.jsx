@@ -6,8 +6,6 @@ import {
   AlertTriangle, 
   QrCode, 
   Search, 
-  FileText, 
-  Send, 
   Camera, 
   MapPin, 
   CheckCircle2, 
@@ -17,8 +15,19 @@ import {
   Lock,
   Layers,
   ArrowRight,
-  Sparkles
+  Eye,
+  AlertOctagon,
+  RotateCcw,
+  Sparkles,
+  ExternalLink,
+  Info
 } from 'lucide-react';
+
+import CameraCapture from './components/CameraCapture';
+import GeoLocationEnforcer from './components/GeoLocationEnforcer';
+import NameplateReviewSideBySide from './components/NameplateReviewSideBySide';
+import AdminRedFlagModal from './components/AdminRedFlagModal';
+import PublicConcernModal from './components/PublicConcernModal';
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -32,7 +41,13 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // Merchant Portal State
+  // M2 State: Admin Drill-Down Modal
+  const [selectedFlagForDrillDown, setSelectedFlagForDrillDown] = useState(null);
+
+  // M2 State: Public Concern Modal
+  const [publicConcernOpen, setPublicConcernOpen] = useState(false);
+
+  // M2 State: Merchant Register Scale with Nameplate
   const [newInstModal, setNewInstModal] = useState(false);
   const [instForm, setInstForm] = useState({
     owner_id: 'usr-mer-01',
@@ -42,25 +57,29 @@ export default function App() {
     serial_number: '',
     capacity: '30 kg (e=5g)',
     accuracy_class: 'Class III',
-    premises_address: '104, Laxmi Road Market, Pune'
+    premises_address: '104, Laxmi Road Market, Pune',
+    nameplate_photo_url: ''
   });
 
-  // Public QR Search State
-  const [certQuery, setCertQuery] = useState('MH-PUN-2026-00841');
-  const [publicCert, setPublicCert] = useState(null);
-  const [complaintModal, setComplaintModal] = useState(false);
-  const [complaintText, setComplaintText] = useState('');
-
-  // Inspector Form State
+  // M2 State: Inspector Test Entry Modal
   const [inspectModal, setInspectModal] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
   const [inspectForm, setInspectForm] = useState({
     zero_error: '0.0',
     repeatability_error: '0.01',
-    eccentricity_error: '0.02',
+    eccentricity_error: '0.01',
+    discrimination_pass: 1,
     nameplate_match: 'MATCH',
-    result: 'PASS'
+    result: 'PASS',
+    photo_url: '',
+    geo_lat: 18.5167,
+    geo_lng: 73.8562
   });
+  const [submittingTest, setSubmittingTest] = useState(false);
+
+  // Public QR Search State
+  const [certQuery, setCertQuery] = useState('MH-PUN-2026-00841');
+  const [publicCert, setPublicCert] = useState(null);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -94,8 +113,14 @@ export default function App() {
     fetchData();
   }, []);
 
+  // Merchant: Register scale with mandatory nameplate
   const handleRegisterInstrument = async (e) => {
     e.preventDefault();
+    if (!instForm.nameplate_photo_url) {
+      showToast('Mandatory Nameplate photo required for physical-digital binding', 'error');
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/instruments`, {
         method: 'POST',
@@ -106,6 +131,17 @@ export default function App() {
       if (data.success) {
         showToast('Weighing Scale registered with physical nameplate metadata!');
         setNewInstModal(false);
+        setInstForm({
+          owner_id: 'usr-mer-01',
+          category: 'ELECTRONIC_WEIGHING',
+          make: '',
+          model: '',
+          serial_number: '',
+          capacity: '30 kg (e=5g)',
+          accuracy_class: 'Class III',
+          premises_address: '104, Laxmi Road Market, Pune',
+          nameplate_photo_url: ''
+        });
         fetchData();
       } else {
         showToast(data.error, 'error');
@@ -115,6 +151,7 @@ export default function App() {
     }
   };
 
+  // Merchant: Apply for verification
   const handleApplyVerification = async (instrumentId) => {
     try {
       const res = await fetch(`${API_BASE}/applications`, {
@@ -129,7 +166,7 @@ export default function App() {
       });
       const data = await res.json();
       if (data.success) {
-        showToast(`Allocated Inspector: ${data.assigned_officer.name} via Blind Anti-Collusion Engine!`);
+        showToast(`Allocated Inspector: ${data.assigned_officer ? data.assigned_officer.name : 'Officer'} via Blind Anti-Collusion Engine!`);
         fetchData();
       } else {
         showToast(data.error, 'error');
@@ -139,9 +176,10 @@ export default function App() {
     }
   };
 
+  // Public QR: Look up certificate
   const handleVerifyCert = async (certNum) => {
     try {
-      const res = await fetch(`${API_BASE}/certificates/verify/${certNum}`);
+      const res = await fetch(`${API_BASE}/certificates/verify/${certNum.trim()}`);
       const data = await res.json();
       if (data.success) {
         setPublicCert(data.certificate);
@@ -154,35 +192,18 @@ export default function App() {
     }
   };
 
-  const handleSubmitComplaint = async () => {
-    if (!complaintText) return;
-    try {
-      const res = await fetch(`${API_BASE}/complaints`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          certificate_number: publicCert?.certificate_number,
-          description: complaintText,
-          complainant_name: 'Concerned Consumer',
-          evidence_photo_url: '/uploads/evidence/consumer_short_weight.jpg'
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        showToast('Complaint recorded & inspector risk score updated dynamically!');
-        setComplaintModal(false);
-        setComplaintText('');
-        fetchData();
-      }
-    } catch (err) {
-      showToast('Failed to submit complaint', 'error');
-    }
-  };
-
+  // Inspector: Submit evidence-bound verification
   const handleSubmitInspection = async (e) => {
     e.preventDefault();
     if (!selectedApp) return;
+
+    if (!inspectForm.photo_url) {
+      showToast('Integrity Violation: Live display photo proof is mandatory', 'error');
+      return;
+    }
+
     try {
+      setSubmittingTest(true);
       const res = await fetch(`${API_BASE}/verifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -193,29 +214,74 @@ export default function App() {
           zero_error: parseFloat(inspectForm.zero_error),
           repeatability_error: parseFloat(inspectForm.repeatability_error),
           eccentricity_error: parseFloat(inspectForm.eccentricity_error),
+          discrimination_pass: parseInt(inspectForm.discrimination_pass, 10),
           overall_result: inspectForm.result,
-          photo_url: '/uploads/evidence/live_scale_display.jpg',
-          geo_lat: 18.5167,
-          geo_lng: 73.8562,
+          photo_url: inspectForm.photo_url,
+          geo_lat: inspectForm.geo_lat,
+          geo_lng: inspectForm.geo_lng,
           nameplate_match_status: inspectForm.nameplate_match
         })
       });
       const data = await res.json();
       if (data.success) {
-        showToast(`Verification recorded! Block Hash: ${data.record_hash.substring(0, 12)}... (Linked to chain)`);
+        showToast(`Verification recorded! Block Hash: ${data.record_hash?.substring(0, 14)}...`);
         setInspectModal(false);
         fetchData();
       } else {
         showToast(data.error, 'error');
       }
     } catch (err) {
-      showToast('Verification failed', 'error');
+      showToast('Verification submission failed', 'error');
+    } finally {
+      setSubmittingTest(false);
+    }
+  };
+
+  // Admin: Simulate Tampering (Demo Feature)
+  const handleSimulateTamper = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/integrity/simulate-tamper`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Simulated DB edit: Record altered directly in SQLite!');
+        fetchData();
+      }
+    } catch (err) {
+      showToast('Tamper simulation failed', 'error');
+    }
+  };
+
+  // Admin: Restore Chain
+  const handleRestoreChain = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/integrity/restore-chain`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Database record restored to authentic state!');
+        fetchData();
+      }
+    } catch (err) {
+      showToast('Restore failed', 'error');
+    }
+  };
+
+  // Admin: Trigger Anomaly Engine On-Demand
+  const handleRunAnomalyEngine = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/risk-flags/run-engine`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Anomaly Engine Executed: ${data.results?.total_anomalies_detected} anomalies analyzed.`);
+        fetchData();
+      }
+    } catch (err) {
+      showToast('Failed to run anomaly engine', 'error');
     }
   };
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Top Navbar */}
+      {/* Top Navigation Bar */}
       <header style={{ background: '#1e293b', color: '#fff', padding: '14px 24px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -225,14 +291,14 @@ export default function App() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '1.25rem', fontWeight: '800', letterSpacing: '-0.5px' }}>VerifyMET+</span>
-                <span style={{ fontSize: '0.7rem', background: '#059669', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>LAYER 1 READY</span>
+                <span style={{ fontSize: '0.7rem', background: '#059669', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>M2 EVIDENCE ENGINE</span>
               </div>
               <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Legal Metrology Online Verification & Cryptographic Integrity Platform</p>
             </div>
           </div>
 
           {/* Role Switcher */}
-          <div style={{ display: 'flex', background: '#0f172a', padding: '4px', borderRadius: '8px', gap: '4px' }}>
+          <div className="nav-role-switcher" style={{ display: 'flex', background: '#0f172a', padding: '4px', borderRadius: '8px', gap: '4px' }}>
             <button 
               onClick={() => setActiveRole('admin')}
               style={{
@@ -286,31 +352,39 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Workspace View */}
+      {/* Main Container */}
       <main style={{ maxWidth: '1280px', margin: '24px auto', padding: '0 20px', flex: 1, width: '100%' }}>
         
-        {/* VIEW 1: ADMIN & INTEGRITY DASHBOARD */}
+        {/* VIEW 1: STATE ADMIN & INTEGRITY DASHBOARD */}
         {activeRole === 'admin' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h1 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#0f172a' }}>State Legal Metrology Controller Dashboard</h1>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#0f172a' }}>State Legal Metrology Controller Surveillance</h1>
                 <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Real-time surveillance, behavioral fraud detection & cryptographic audit log</p>
               </div>
-              <button 
-                onClick={fetchData}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#e2e8f0', border: 'none', padding: '8px 14px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600' }}
-              >
-                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh Data
-              </button>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button 
+                  onClick={handleRunAnomalyEngine}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#4338ca', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600' }}
+                >
+                  <Sparkles size={14} /> Run Anomaly Engine
+                </button>
+                <button 
+                  onClick={fetchData}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#e2e8f0', border: 'none', padding: '8px 14px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600' }}
+                >
+                  <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+                </button>
+              </div>
             </div>
 
-            {/* Cryptographic Chain Status Banner */}
+            {/* Cryptographic Chain Status Banner with Live Tamper Demo Controls */}
             <div style={{
               background: chainStatus?.valid ? '#f0fdf4' : '#fef2f2',
               border: `1px solid ${chainStatus?.valid ? '#bbf7d0' : '#fecaca'}`,
               borderRadius: '10px', padding: '16px', marginBottom: '24px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ background: chainStatus?.valid ? '#22c55e' : '#ef4444', color: '#fff', padding: '10px', borderRadius: '8px' }}>
@@ -318,23 +392,44 @@ export default function App() {
                 </div>
                 <div>
                   <h3 style={{ fontSize: '0.95rem', fontWeight: '700', color: chainStatus?.valid ? '#166534' : '#991b1b' }}>
-                    Cryptographic SHA-256 Hash Chain: {chainStatus?.valid ? 'SECURE & INTACT' : 'TAMPER DETECTED!'}
+                    Cryptographic SHA-256 Hash Chain: {chainStatus?.valid ? 'SECURE & VERIFIED' : 'TAMPERING DETECTED!'}
                   </h3>
                   <p style={{ fontSize: '0.8rem', color: '#475569', marginTop: '2px' }}>
                     {chainStatus?.message} Head Hash: <code style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px' }}>{chainStatus?.head_hash?.substring(0, 20)}...</code>
                   </p>
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Verified Blocks</span>
-                <p style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>{chainStatus?.count || 0}</p>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ textAlign: 'right', marginRight: '8px' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Chained Blocks</span>
+                  <p style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>{chainStatus?.count || 0}</p>
+                </div>
+                
+                {/* Tamper Simulation Demo Buttons */}
+                {chainStatus?.valid ? (
+                  <button 
+                    onClick={handleSimulateTamper}
+                    style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#dc2626', padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    title="Deliberately edits a DB record to demonstrate cryptographic audit detection"
+                  >
+                    <AlertOctagon size={13} /> Simulate DB Tamper (Demo)
+                  </button>
+                ) : (
+                  <button 
+                    onClick={handleRestoreChain}
+                    style={{ background: '#22c55e', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <RotateCcw size={13} /> Restore Chain
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Red-Flag Anomaly Engine Section (Uniqueness) */}
+            {/* Red-Flag Anomaly Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '28px' }}>
               
-              {/* Behavioral Anomaly Card */}
+              {/* Behavioral Anomaly Card with Drill-Down */}
               <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -345,14 +440,33 @@ export default function App() {
                     {riskFlags.length} Anomalies
                   </span>
                 </div>
+                
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {riskFlags.map((flag) => (
-                    <div key={flag.id} style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '8px', padding: '12px' }}>
+                    <div 
+                      key={flag.id} 
+                      onClick={() => setSelectedFlagForDrillDown(flag)}
+                      style={{ 
+                        background: '#fff1f2', 
+                        border: '1px solid #fecdd3', 
+                        borderRadius: '8px', 
+                        padding: '12px', 
+                        cursor: 'pointer',
+                        transition: 'transform 0.15s, box-shadow 0.15s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px rgba(225, 29, 72, 0.15)'}
+                      onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}
+                    >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                         <span style={{ fontWeight: '700', fontSize: '0.85rem', color: '#9f1239' }}>{flag.flag_type}</span>
-                        <span style={{ background: '#be123c', color: '#fff', fontSize: '0.7rem', fontWeight: '700', padding: '2px 6px', borderRadius: '4px' }}>
-                          Risk: {flag.score}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ background: '#be123c', color: '#fff', fontSize: '0.7rem', fontWeight: '700', padding: '2px 6px', borderRadius: '4px' }}>
+                            Score: {flag.score}
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                            <Eye size={12} /> View
+                          </span>
+                        </div>
                       </div>
                       <p style={{ fontSize: '0.75rem', color: '#4c0519', marginBottom: '4px' }}>
                         <strong>Target:</strong> {flag.details?.officer_name || flag.entity_type}
@@ -362,10 +476,15 @@ export default function App() {
                       </p>
                     </div>
                   ))}
+                  {riskFlags.length === 0 && (
+                    <p style={{ fontSize: '0.8rem', color: '#64748b', textAlign: 'center', padding: '16px' }}>
+                      No active anomalies detected by governance engine.
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* Inspector Integrity Roster (Clean vs Flagged) */}
+              {/* Inspector Integrity Roster */}
               <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -442,7 +561,7 @@ export default function App() {
         {/* VIEW 2: MERCHANT / SHOP OWNER PORTAL */}
         {activeRole === 'merchant' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <h1 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Sharma Provisions & Retail Pvt Ltd</h1>
                 <p style={{ fontSize: '0.875rem', color: '#64748b' }}>GST: 27AABCS1429B1Z2 | Location: Laxmi Road Market, Pune</p>
@@ -514,16 +633,16 @@ export default function App() {
               ))}
             </div>
 
-            {/* Registration Modal */}
+            {/* Registration Modal with Mandatory Nameplate Capture (Layer 3 - Physical-Digital Binding) */}
             {newInstModal && (
-              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-                <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', maxWidth: '500px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '8px' }}>Register Instrument with Physical Nameplate</h2>
-                  <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '16px' }}>Required under Section 24 of Legal Metrology Act for physical-digital binding</p>
+              <div className="modal-backdrop">
+                <div className="modal-dialog" style={{ background: '#fff', borderRadius: '12px', padding: '24px', maxWidth: '520px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '4px' }}>Register Instrument with Physical Nameplate</h2>
+                  <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '16px' }}>Mandatory under Legal Metrology Act Section 24 for physical-digital binding</p>
                   
                   <form onSubmit={handleRegisterInstrument} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Manufacturer (Make)</label>
+                      <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Manufacturer (Make) *</label>
                       <input 
                         type="text" required value={instForm.make} onChange={e => setInstForm({...instForm, make: e.target.value})}
                         placeholder="e.g. Essae-Teraoka"
@@ -531,7 +650,7 @@ export default function App() {
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Model</label>
+                      <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Model *</label>
                       <input 
                         type="text" required value={instForm.model} onChange={e => setInstForm({...instForm, model: e.target.value})}
                         placeholder="e.g. DS-215N Counter Scale"
@@ -539,7 +658,7 @@ export default function App() {
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Serial Number (as on metallic plate)</label>
+                      <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Serial Number (As shown on metallic plate) *</label>
                       <input 
                         type="text" required value={instForm.serial_number} onChange={e => setInstForm({...instForm, serial_number: e.target.value})}
                         placeholder="e.g. ESS-2026-88192"
@@ -547,23 +666,23 @@ export default function App() {
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Capacity & Least Count</label>
+                      <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Capacity & Least Count *</label>
                       <input 
                         type="text" required value={instForm.capacity} onChange={e => setInstForm({...instForm, capacity: e.target.value})}
                         style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
                       />
                     </div>
-                    <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <Camera size={16} color="#2563eb" />
-                        <span style={{ fontSize: '0.75rem', fontWeight: '700' }}>Nameplate Photo Attachment</span>
-                      </div>
-                      <p style={{ fontSize: '0.7rem', color: '#64748b' }}>Simulated upload of metallic plate photo. Enables tamper prevention algorithm.</p>
-                    </div>
 
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                    {/* M2 Mandatory Nameplate Camera Capture */}
+                    <CameraCapture 
+                      label="Mandatory Metallic Nameplate Photo" 
+                      required={true}
+                      onCapture={(dataUrl) => setInstForm({...instForm, nameplate_photo_url: dataUrl})}
+                    />
+
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                       <button type="button" onClick={() => setNewInstModal(false)} style={{ flex: 1, padding: '10px', background: '#e2e8f0', border: 'none', borderRadius: '6px', fontWeight: '600' }}>Cancel</button>
-                      <button type="submit" style={{ flex: 1, padding: '10px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600' }}>Submit & Save</button>
+                      <button type="submit" style={{ flex: 1, padding: '10px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600' }}>Submit & Save Scale</button>
                     </div>
                   </form>
                 </div>
@@ -572,7 +691,7 @@ export default function App() {
           </div>
         )}
 
-        {/* VIEW 3: LMO INSPECTOR FIELD PORTAL */}
+        {/* VIEW 3: LMO INSPECTOR FIELD PORTAL (M2 Core Deliverable) */}
         {activeRole === 'inspector' && (
           <div>
             <div style={{ marginBottom: '20px' }}>
@@ -594,7 +713,21 @@ export default function App() {
                       <p style={{ fontSize: '0.75rem', color: '#64748b' }}>Instrument: {app.make} {app.model} (S/N: {app.serial_number})</p>
                     </div>
                     <button 
-                      onClick={() => { setSelectedApp(app); setInspectModal(true); }}
+                      onClick={() => { 
+                        setSelectedApp(app); 
+                        setInspectModal(true); 
+                        setInspectForm({
+                          zero_error: '0.0',
+                          repeatability_error: '0.01',
+                          eccentricity_error: '0.01',
+                          discrimination_pass: 1,
+                          nameplate_match: 'MATCH',
+                          result: 'PASS',
+                          photo_url: '',
+                          geo_lat: 18.5167,
+                          geo_lng: 73.8562
+                        });
+                      }}
                       style={{ background: '#059669', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
                       <Camera size={14} /> Conduct Evidence-Bound Test
@@ -607,35 +740,40 @@ export default function App() {
               </div>
             </div>
 
-            {/* Test Entry Modal (Evidence-Bound) */}
+            {/* Test Entry Modal (Evidence-Bound & Physical-Digital Binding) */}
             {inspectModal && selectedApp && (
-              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-                <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', maxWidth: '540px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+              <div className="modal-backdrop">
+                <div className="modal-dialog" style={{ background: '#fff', borderRadius: '12px', padding: '24px', maxWidth: '580px', width: '100%', maxHeight: '92vh', overflowY: 'auto' }}>
                   <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '4px' }}>Conduct Evidence-Bound Verification</h2>
-                  <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '16px' }}>Application: {selectedApp.application_number} | {selectedApp.make} {selectedApp.model}</p>
+                  <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '14px' }}>
+                    Application: <strong>{selectedApp.application_number}</strong> | Instrument: {selectedApp.make} {selectedApp.model}
+                  </p>
 
-                  <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '12px', borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <MapPin color="#2563eb" size={20} />
-                    <div style={{ fontSize: '0.75rem', color: '#1e40af' }}>
-                      <div><strong>Geo-Location Enforced:</strong> 18.5167° N, 73.8562° E (Pune)</div>
-                      <div><strong>Timestamp:</strong> {new Date().toLocaleTimeString()} (Server Synchronized)</div>
-                    </div>
-                  </div>
+                  {/* 1. M2 Geo-Location Enforcer Component */}
+                  <GeoLocationEnforcer 
+                    onLocationUpdate={(loc) => setInspectForm(f => ({ ...f, geo_lat: loc.lat, geo_lng: loc.lng }))}
+                  />
 
+                  {/* 2. M2 Live Camera Capture Viewfinder */}
+                  <CameraCapture 
+                    label="Live Scale Display Photo Evidence"
+                    required={true}
+                    onCapture={(dataUrl) => setInspectForm(f => ({ ...f, photo_url: dataUrl }))}
+                  />
+
+                  {/* 3. M2 Side-by-Side Nameplate Verification Screen */}
+                  <NameplateReviewSideBySide 
+                    registeredPhotoUrl={selectedApp.nameplate_photo_url || '/uploads/nameplates/sample.jpg'}
+                    currentPhotoUrl={inspectForm.photo_url}
+                    serialNumber={selectedApp.serial_number}
+                    make={selectedApp.make}
+                    model={selectedApp.model}
+                    selectedStatus={inspectForm.nameplate_match}
+                    onChange={(status) => setInspectForm(f => ({ ...f, nameplate_match: status }))}
+                  />
+
+                  {/* 4. Inspection Test Measurements */}
                   <form onSubmit={handleSubmitInspection} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Physical Nameplate Match Check</label>
-                      <select 
-                        value={inspectForm.nameplate_match} 
-                        onChange={e => setInspectForm({...inspectForm, nameplate_match: e.target.value})}
-                        style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
-                      >
-                        <option value="MATCH">MATCH (Exact serial number & model match)</option>
-                        <option value="MISMATCH">MISMATCH (Serial number swapped / tampered)</option>
-                        <option value="NEEDS_REVIEW">UNREADABLE / WORN OUT</option>
-                      </select>
-                    </div>
-
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <div>
                         <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Zero Load Error (e)</label>
@@ -671,7 +809,14 @@ export default function App() {
 
                     <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                       <button type="button" onClick={() => setInspectModal(false)} style={{ flex: 1, padding: '10px', background: '#e2e8f0', border: 'none', borderRadius: '6px', fontWeight: '600' }}>Cancel</button>
-                      <button type="submit" style={{ flex: 1, padding: '10px', background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600' }}>Submit & Hash-Chain</button>
+                      <button 
+                        type="submit" 
+                        disabled={submittingTest}
+                        style={{ flex: 1, padding: '10px', background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                      >
+                        {submittingTest ? <RefreshCw size={14} className="animate-spin" /> : null}
+                        {submittingTest ? 'Chaining Record...' : 'Submit & Hash-Chain'}
+                      </button>
                     </div>
                   </form>
                 </div>
@@ -680,7 +825,7 @@ export default function App() {
           </div>
         )}
 
-        {/* VIEW 4: PUBLIC CITIZEN QR AUTHENTICATION PORTAL */}
+        {/* VIEW 4: PUBLIC CITIZEN QR AUTHENTICATION PORTAL (M2 Deliverable) */}
         {activeRole === 'public' && (
           <div style={{ maxWidth: '680px', margin: '0 auto' }}>
             <div style={{ textAlign: 'center', marginBottom: '24px' }}>
@@ -747,37 +892,11 @@ export default function App() {
                 <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Notice discrepancy or short-weighting?</span>
                   <button 
-                    onClick={() => setComplaintModal(true)}
+                    onClick={() => setPublicConcernOpen(true)}
                     style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '8px 14px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     <AlertTriangle size={14} /> Report a Concern (No Login)
                   </button>
-                </div>
-              </div>
-            )}
-
-            {/* Complaint Modal */}
-            {complaintModal && (
-              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-                <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', maxWidth: '480px', width: '100%' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '6px' }}>Report Short-Weighting / Instrument Concern</h2>
-                  <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '14px' }}>Certificate: {publicCert?.certificate_number} | Automatically flags inspector & merchant in system</p>
-                  
-                  <div style={{ marginBottom: '14px' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Describe Observed Discrepancy</label>
-                    <textarea 
-                      rows={3} 
-                      value={complaintText} 
-                      onChange={e => setComplaintText(e.target.value)}
-                      placeholder="e.g. Weighing 1 kg of rice showed 900g on standard scale. Scale sticker appears peeled."
-                      style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.85rem' }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => setComplaintModal(false)} style={{ flex: 1, padding: '10px', background: '#e2e8f0', border: 'none', borderRadius: '6px', fontWeight: '600' }}>Cancel</button>
-                    <button onClick={handleSubmitComplaint} style={{ flex: 1, padding: '10px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600' }}>Submit Report</button>
-                  </div>
                 </div>
               </div>
             )}
@@ -786,6 +905,27 @@ export default function App() {
 
       </main>
 
+      {/* M2 Modal: Admin Red-Flag Anomaly Drill-Down Modal */}
+      {selectedFlagForDrillDown && (
+        <AdminRedFlagModal 
+          flag={selectedFlagForDrillDown} 
+          onClose={() => setSelectedFlagForDrillDown(null)} 
+        />
+      )}
+
+      {/* M2 Modal: Public Citizen Concern Modal */}
+      {publicConcernOpen && (
+        <PublicConcernModal 
+          certificateNumber={publicCert?.certificate_number || certQuery}
+          certificateId={publicCert?.id}
+          onClose={() => setPublicConcernOpen(false)}
+          onSubmitSuccess={() => {
+            showToast('Concern filed and flagged in enforcement surveillance!');
+            fetchData();
+          }}
+        />
+      )}
+
       {/* Footer */}
       <footer style={{ background: '#0f172a', color: '#94a3b8', padding: '16px 24px', fontSize: '0.75rem', borderTop: '1px solid #1e293b' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
@@ -793,10 +933,10 @@ export default function App() {
             VerifyMET+ Integrity System | Legal Metrology Act, 2009 & General Rules, 2011
           </div>
           <div style={{ display: 'flex', gap: '16px' }}>
-            <span>Layer 1 Foundation</span>
-            <span>SHA-256 Hash Chain</span>
-            <span>Blind Allocation</span>
-            <span>DPDP Act 2023 Ready</span>
+            <span>Evidence-Bound Testing (3.1)</span>
+            <span>Physical-Digital Binding (3.2)</span>
+            <span>Governance Engine (3.3 & 3.4)</span>
+            <span>Public Complaint Loop (3.5)</span>
           </div>
         </div>
       </footer>
