@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   ShieldCheck, 
   Scale, 
@@ -91,6 +91,23 @@ export default function App() {
     geo_lng: 73.8562
   });
   const [submittingTest, setSubmittingTest] = useState(false);
+
+  // Stable location handlers to prevent re-render thrashing / jitter
+  const handleMerchantLocationRetrieved = useCallback((coords) => {
+    if (!coords) return;
+    setInstForm(prev => {
+      if (prev.geo_lat === coords.lat && prev.geo_lng === coords.lng) return prev;
+      return { ...prev, geo_lat: coords.lat, geo_lng: coords.lng };
+    });
+  }, []);
+
+  const handleInspectorLocationRetrieved = useCallback((coords) => {
+    if (!coords) return;
+    setInspectForm(prev => {
+      if (prev.geo_lat === coords.lat && prev.geo_lng === coords.lng) return prev;
+      return { ...prev, geo_lat: coords.lat, geo_lng: coords.lng };
+    });
+  }, []);
 
   // Public QR Search State
   const [certQuery, setCertQuery] = useState('MH-PUN-2026-00841');
@@ -892,7 +909,7 @@ export default function App() {
             {/* Merchant New Scale Modal */}
             {newInstModal && (
               <div className="modal-backdrop">
-                <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', maxWidth: '520px', width: '100%', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', maxWidth: '520px', width: '100%', maxHeight: '92vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#0f172a' }}>Register New Scale with Physical Binding</h3>
                     <button onClick={() => setNewInstModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#64748b' }}>×</button>
@@ -921,9 +938,7 @@ export default function App() {
                       <CameraCapture 
                         label="Live Nameplate Viewfinder Capture"
                         required={true}
-                        onLocationRetrieved={(coords) => {
-                          setInstForm(prev => ({ ...prev, geo_lat: coords.lat, geo_lng: coords.lng }));
-                        }}
+                        onLocationRetrieved={handleMerchantLocationRetrieved}
                         onCapture={(dataUrl, coords) => {
                           setInstForm(prev => ({
                             ...prev,
@@ -1028,9 +1043,7 @@ export default function App() {
                       <CameraCapture 
                         label="Live Scale Display & Inspection Seal Capture"
                         required={true}
-                        onLocationRetrieved={(coords) => {
-                          setInspectForm(prev => ({ ...prev, geo_lat: coords.lat, geo_lng: coords.lng }));
-                        }}
+                        onLocationRetrieved={handleInspectorLocationRetrieved}
                         onCapture={(url, coords) => {
                           setInspectForm(prev => ({
                             ...prev,
