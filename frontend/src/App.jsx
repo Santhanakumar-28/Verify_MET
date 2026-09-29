@@ -71,7 +71,9 @@ export default function App() {
     capacity: '30 kg (e=5g)',
     accuracy_class: 'Class III',
     premises_address: '104, Laxmi Road Market, Pune',
-    nameplate_photo_url: ''
+    nameplate_photo_url: '',
+    geo_lat: null,
+    geo_lng: null
   });
 
   // M2 State: Inspector Test Entry Modal
@@ -174,7 +176,9 @@ export default function App() {
           capacity: '30 kg (e=5g)',
           accuracy_class: 'Class III',
           premises_address: '104, Laxmi Road Market, Pune',
-          nameplate_photo_url: ''
+          nameplate_photo_url: '',
+          geo_lat: null,
+          geo_lng: null
         });
         fetchData();
       } else {
@@ -911,8 +915,24 @@ export default function App() {
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
-                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '600', marginBottom: '4px' }}>Mandatory Nameplate Photo Proof (Camera / File)</label>
-                      <CameraCapture onCapture={(dataUrl) => setInstForm({...instForm, nameplate_photo_url: dataUrl})} />
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', marginBottom: '6px', color: '#0f172a' }}>
+                        Mandatory Nameplate Proof (Live Camera & Auto-GPS Only)
+                      </label>
+                      <CameraCapture 
+                        label="Live Nameplate Viewfinder Capture"
+                        required={true}
+                        onLocationRetrieved={(coords) => {
+                          setInstForm(prev => ({ ...prev, geo_lat: coords.lat, geo_lng: coords.lng }));
+                        }}
+                        onCapture={(dataUrl, coords) => {
+                          setInstForm(prev => ({
+                            ...prev,
+                            nameplate_photo_url: dataUrl,
+                            geo_lat: coords?.lat || prev.geo_lat,
+                            geo_lng: coords?.lng || prev.geo_lng
+                          }));
+                        }}
+                      />
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -1003,9 +1023,23 @@ export default function App() {
                     {/* Layer 2: Live Viewfinder Camera Snapshot */}
                     <div style={{ marginBottom: '16px' }}>
                       <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>
-                        1. Mandatory Live Display Photo Proof (HTML5 MediaDevices)
+                        1. Mandatory Live Display Photo Proof (HTML5 MediaDevices - Live Camera Only)
                       </label>
-                      <CameraCapture onCapture={(url) => setInspectForm({...inspectForm, photo_url: url})} />
+                      <CameraCapture 
+                        label="Live Scale Display & Inspection Seal Capture"
+                        required={true}
+                        onLocationRetrieved={(coords) => {
+                          setInspectForm(prev => ({ ...prev, geo_lat: coords.lat, geo_lng: coords.lng }));
+                        }}
+                        onCapture={(url, coords) => {
+                          setInspectForm(prev => ({
+                            ...prev,
+                            photo_url: url,
+                            geo_lat: coords?.lat || prev.geo_lat,
+                            geo_lng: coords?.lng || prev.geo_lng
+                          }));
+                        }}
+                      />
                     </div>
 
                     {/* Layer 2: GPS Location Enforcer */}

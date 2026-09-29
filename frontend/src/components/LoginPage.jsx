@@ -36,7 +36,7 @@ export default function LoginPage({ onLogin, onGuestPublic }) {
       color: '#2563eb',
       lightBg: '#eff6ff',
       borderColor: '#bfdbfe',
-      desc: 'Register electronic scales, upload physical nameplate proof, request periodic re-verification, and track digital verification certificates.',
+      desc: 'Register electronic scales, capture mandatory live camera nameplate proof with auto-GPS geotagging, request periodic re-verification, and track digital verification certificates.',
       workflowStep: 'Step 1: Register scale & apply for verification'
     },
     {

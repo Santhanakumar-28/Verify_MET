@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react';
 
-export default function GeoLocationEnforcer({ onLocationUpdate }) {
+export default function GeoLocationEnforcer({ onLocationUpdate, onLocation }) {
   const [coords, setCoords] = useState({ lat: 18.5167, lng: 73.8562 }); // Default Pune
   const [accuracy, setAccuracy] = useState(12.5); // meters
   const [status, setStatus] = useState('prompting'); // 'prompting', 'granted', 'denied', 'simulated'
   const [loading, setLoading] = useState(false);
+
+  const notifyLocation = (newCoords) => {
+    if (onLocationUpdate) onLocationUpdate(newCoords);
+    if (onLocation) onLocation(newCoords);
+  };
 
   const fetchLocation = () => {
     setLoading(true);
     if (!navigator.geolocation) {
       setStatus('simulated');
       setLoading(false);
-      if (onLocationUpdate) onLocationUpdate({ lat: 18.5167, lng: 73.8562, accuracy: 15 });
+      notifyLocation({ lat: 18.5167, lng: 73.8562, accuracy: 15 });
       return;
     }
 
@@ -27,9 +32,7 @@ export default function GeoLocationEnforcer({ onLocationUpdate }) {
         setAccuracy(newCoords.accuracy);
         setStatus('granted');
         setLoading(false);
-        if (onLocationUpdate) {
-          onLocationUpdate(newCoords);
-        }
+        notifyLocation(newCoords);
       },
       (error) => {
         console.warn("Geolocation warning:", error.message);

@@ -27,7 +27,7 @@ export default function WorkflowGuide({ currentRole, onNavigateStep, chainValid 
       role: 'merchant',
       actor: 'Shop Owner / Merchant',
       title: '1. Register Scale with Nameplate Photo',
-      shortDesc: 'Owner uploads scale specs & physical nameplate photo proof.',
+      shortDesc: 'Owner captures scale specs & mandatory live camera nameplate proof with auto-GPS.',
       purpose: 'Enforces Physical-Digital Binding from day zero. Eliminates fake or counterfeit machines.',
       badge: 'Merchant Portal',
       icon: Scale,

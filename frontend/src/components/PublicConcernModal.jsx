@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { AlertTriangle, CheckCircle2, X, Upload, Camera, ShieldCheck, AlertOctagon } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, X, Camera, ShieldCheck, AlertOctagon } from 'lucide-react';
+import CameraCapture from './CameraCapture';
 
 export default function PublicConcernModal({ certificateNumber, certificateId, onClose, onSubmitSuccess }) {
   const [category, setCategory] = useState('SHORT_WEIGHING');
@@ -7,20 +8,11 @@ export default function PublicConcernModal({ certificateNumber, certificateId, o
   const [complainantName, setComplainantName] = useState('');
   const [complainantPhone, setComplainantPhone] = useState('');
   const [evidencePhoto, setEvidencePhoto] = useState(null);
+  const [evidenceGps, setEvidenceGps] = useState(null);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [complaintId, setComplaintId] = useState('');
   const [error, setError] = useState(null);
-
-  const handlePhotoUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setEvidencePhoto(event.target.result);
-    };
-    reader.readAsDataURL(file);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,7 +30,7 @@ export default function PublicConcernModal({ certificateNumber, certificateId, o
         body: JSON.stringify({
           certificate_number: certificateNumber,
           certificate_id: certificateId,
-          description: `[Category: ${category}] ${description.trim()}`,
+          description: `[Category: ${category}] ${description.trim()}${evidenceGps ? ` [GPS: ${evidenceGps.lat}, ${evidenceGps.lng}]` : ''}`,
           complainant_name: complainantName || 'Anonymous Consumer',
           complainant_phone: complainantPhone || 'Confidential',
           evidence_photo_url: evidencePhoto || '/uploads/evidence/consumer_short_weight.jpg'
@@ -67,8 +59,10 @@ export default function PublicConcernModal({ certificateNumber, certificateId, o
         style={{
           background: '#fff',
           borderRadius: '12px',
-          maxWidth: '520px',
+          maxWidth: '540px',
           width: '100%',
+          maxHeight: '92vh',
+          overflowY: 'auto',
           padding: '24px',
           boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
           position: 'relative'
@@ -78,7 +72,7 @@ export default function PublicConcernModal({ certificateNumber, certificateId, o
         <button 
           type="button" 
           onClick={onClose}
-          style={{ position: 'absolute', top: '16px', right: '16px', background: '#f1f5f9', border: 'none', borderRadius: '50%', padding: '6px', color: '#64748b', display: 'flex' }}
+          style={{ position: 'absolute', top: '16px', right: '16px', background: '#f1f5f9', border: 'none', borderRadius: '50%', padding: '6px', color: '#64748b', display: 'flex', cursor: 'pointer' }}
         >
           <X size={18} />
         </button>
@@ -103,7 +97,7 @@ export default function PublicConcernModal({ certificateNumber, certificateId, o
             <button 
               type="button" 
               onClick={onClose}
-              style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: '6px', fontWeight: '700', fontSize: '0.85rem' }}
+              style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: '6px', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer' }}
             >
               Done
             </button>
@@ -168,30 +162,20 @@ export default function PublicConcernModal({ certificateNumber, certificateId, o
                 />
               </div>
 
-              {/* Photo Proof Upload */}
-              <div style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '8px', padding: '10px 12px' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
-                  Attach Photo Evidence (Optional)
-                </span>
-                {evidencePhoto ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <CheckCircle2 size={14} /> Image Attached
-                    </span>
-                    <button 
-                      type="button" 
-                      onClick={() => setEvidencePhoto(null)}
-                      style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '0.7rem', fontWeight: '600' }}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#2563eb', cursor: 'pointer', fontWeight: '600' }}>
-                    <Upload size={14} /> Upload receipt or scale photo
-                    <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
-                  </label>
-                )}
+              {/* Photo Proof via Mandatory Live Camera & Auto GPS */}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                  Live Camera Proof (Scale / Receipt Display)
+                </label>
+                <CameraCapture 
+                  label="Live Evidence Capture (Receipt / Scale Display)"
+                  required={false}
+                  onCapture={(dataUrl, coords) => {
+                    setEvidencePhoto(dataUrl);
+                    if (coords) setEvidenceGps(coords);
+                  }}
+                  onLocationRetrieved={(coords) => setEvidenceGps(coords)}
+                />
               </div>
 
               {/* Optional Contact Details */}
@@ -222,14 +206,14 @@ export default function PublicConcernModal({ certificateNumber, certificateId, o
                 <button 
                   type="button" 
                   onClick={onClose}
-                  style={{ flex: 1, padding: '10px', background: '#e2e8f0', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '0.85rem' }}
+                  style={{ flex: 1, padding: '10px', background: '#e2e8f0', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
                   disabled={loading || description.trim().length < 10}
-                  style={{ flex: 1, padding: '10px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  style={{ flex: 1, padding: '10px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
                 >
                   {loading ? 'Submitting...' : 'Submit Report'}
                 </button>
