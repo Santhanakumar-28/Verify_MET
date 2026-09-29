@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('node:path');
@@ -31,6 +32,15 @@ app.use('/uploads', express.static(uploadsDir));
 
 // Initialize Database Schema on start
 initSchema();
+
+// Auto-connect and sync with PostgreSQL if configured in .env
+if (process.env.DB_TYPE === 'postgres') {
+  const { initPostgresSchema, syncFromSQLiteToPostgres } = require('./config/postgres');
+  initPostgresSchema()
+    .then(() => syncFromSQLiteToPostgres(require('./config/database').db))
+    .then(() => console.log('🐘 PostgreSQL verify_met connected & synchronized on localhost:5432!'))
+    .catch(err => console.warn('PostgreSQL sync warning:', err.message));
+}
 
 // Mount API Routes
 app.use('/api/auth', require('./routes/auth'));
