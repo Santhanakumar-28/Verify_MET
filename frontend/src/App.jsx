@@ -20,7 +20,12 @@ import {
   RotateCcw,
   Sparkles,
   ExternalLink,
-  Info
+  Info,
+  LogOut,
+  ChevronRight,
+  Building2,
+  FileCheck2,
+  HelpCircle
 } from 'lucide-react';
 
 import CameraCapture from './components/CameraCapture';
@@ -28,10 +33,18 @@ import GeoLocationEnforcer from './components/GeoLocationEnforcer';
 import NameplateReviewSideBySide from './components/NameplateReviewSideBySide';
 import AdminRedFlagModal from './components/AdminRedFlagModal';
 import PublicConcernModal from './components/PublicConcernModal';
+import LoginPage from './components/LoginPage';
+import WorkflowGuide from './components/WorkflowGuide';
+import NameplateBadge from './components/NameplateBadge';
+import WhatsAppSimulatorModal from './components/WhatsAppSimulatorModal';
 
 const API_BASE = 'http://localhost:5000/api';
 
 export default function App() {
+  // Authentication & Persona state
+  const [currentUser, setCurrentUser] = useState(null); // null shows LoginPage
+  const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
+
   const [activeRole, setActiveRole] = useState('admin'); // 'merchant', 'inspector', 'admin', 'public'
   const [instruments, setInstruments] = useState([]);
   const [applications, setApplications] = useState([]);
@@ -112,6 +125,27 @@ export default function App() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Workflow Guide Navigation Helper
+  const handleNavigateStep = (role, step) => {
+    setActiveRole(role);
+    if (step === 1) {
+      setNewInstModal(true);
+    } else if (step === 2) {
+      // highlighted merchant view
+      showToast('Merchant View: Click "Apply for Verification" on any scale below to trigger anti-collusion allocation.');
+    } else if (step === 3) {
+      const pendingApp = applications.find(a => a.status === 'ASSIGNED' || a.status === 'PENDING') || applications[0];
+      if (pendingApp) {
+        setSelectedApp(pendingApp);
+        setInspectModal(true);
+      }
+    } else if (step === 4) {
+      handleVerifyCert('MH-PUN-2026-00841');
+    } else if (step === 5) {
+      showToast('Admin View: Review behavioral anomaly flags and audit SHA-256 chain integrity.');
+    }
+  };
 
   // Merchant: Register scale with mandatory nameplate
   const handleRegisterInstrument = async (e) => {
@@ -279,63 +313,213 @@ export default function App() {
     }
   };
 
+  // If user is not logged in, show the comprehensive multi-role LoginPage!
+  if (!currentUser) {
+    return (
+      <LoginPage
+        onLogin={(user) => {
+          setCurrentUser(user);
+          if (user.role === 'ADMIN') setActiveRole('admin');
+          else if (user.role === 'LMO') setActiveRole('inspector');
+          else if (user.role === 'MERCHANT') setActiveRole('merchant');
+          else setActiveRole('public');
+        }}
+        onGuestPublic={() => {
+          setCurrentUser({ role: 'PUBLIC', name: 'Citizen Consumer' });
+          setActiveRole('public');
+          handleVerifyCert(certQuery);
+        }}
+      />
+    );
+  }
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Top Navigation Bar */}
-      <header style={{ background: '#1e293b', color: '#fff', padding: '14px 24px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc' }}>
+      
+      {/* Top Light-Theme Navigation Bar */}
+      <header style={{
+        backgroundColor: '#ffffff',
+        borderBottom: '1px solid #e2e8f0',
+        padding: '12px 24px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 50
+      }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          
+          {/* Logo & National Emblem Title */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ background: '#2563eb', padding: '8px', borderRadius: '8px', display: 'flex' }}>
-              <Scale size={24} color="#fff" />
+            <div style={{
+              backgroundColor: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              color: '#2563eb',
+              padding: '8px',
+              borderRadius: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Scale size={24} />
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.25rem', fontWeight: '800', letterSpacing: '-0.5px' }}>VerifyMET+</span>
-                <span style={{ fontSize: '0.7rem', background: '#059669', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>M2 EVIDENCE ENGINE</span>
+                <span style={{ fontSize: '1.25rem', fontWeight: '800', letterSpacing: '-0.02em', color: '#0f172a' }}>
+                  Verify<span style={{ color: '#2563eb' }}>MET</span><span style={{ color: '#059669' }}>+</span>
+                </span>
+                <span style={{
+                  fontSize: '0.68rem',
+                  backgroundColor: '#ecfdf5',
+                  color: '#047857',
+                  border: '1px solid #a7f3d0',
+                  padding: '2px 8px',
+                  borderRadius: '9999px',
+                  fontWeight: '700'
+                }}>
+                  LIGHT THEME
+                </span>
               </div>
-              <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Legal Metrology Online Verification & Cryptographic Integrity Platform</p>
+              <p style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                Legal Metrology Online Verification & Cryptographic Ledger System
+              </p>
             </div>
           </div>
 
-          {/* Role Switcher */}
-          <div className="nav-role-switcher" style={{ display: 'flex', background: '#0f172a', padding: '4px', borderRadius: '8px', gap: '4px' }}>
+          {/* Quick Role Switcher (Light Modern Pills) */}
+          <div className="nav-role-switcher" style={{
+            display: 'flex',
+            backgroundColor: '#f1f5f9',
+            padding: '4px',
+            borderRadius: '10px',
+            border: '1px solid #e2e8f0',
+            gap: '4px'
+          }}>
             <button 
               onClick={() => setActiveRole('admin')}
               style={{
-                background: activeRole === 'admin' ? '#2563eb' : 'transparent',
-                color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px'
+                backgroundColor: activeRole === 'admin' ? '#ffffff' : 'transparent',
+                color: activeRole === 'admin' ? '#7c3aed' : '#64748b',
+                border: activeRole === 'admin' ? '1px solid #ddd6fe' : 'none',
+                boxShadow: activeRole === 'admin' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              <ShieldCheck size={16} /> Admin & Integrity
+              <ShieldCheck size={15} /> Admin Surveillance
             </button>
             <button 
               onClick={() => setActiveRole('merchant')}
               style={{
-                background: activeRole === 'merchant' ? '#2563eb' : 'transparent',
-                color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px'
+                backgroundColor: activeRole === 'merchant' ? '#ffffff' : 'transparent',
+                color: activeRole === 'merchant' ? '#2563eb' : '#64748b',
+                border: activeRole === 'merchant' ? '1px solid #bfdbfe' : 'none',
+                boxShadow: activeRole === 'merchant' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              <Scale size={16} /> Shop Owner
+              <Scale size={15} /> Shop Owner
             </button>
             <button 
               onClick={() => setActiveRole('inspector')}
               style={{
-                background: activeRole === 'inspector' ? '#2563eb' : 'transparent',
-                color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px'
+                backgroundColor: activeRole === 'inspector' ? '#ffffff' : 'transparent',
+                color: activeRole === 'inspector' ? '#059669' : '#64748b',
+                border: activeRole === 'inspector' ? '1px solid #a7f3d0' : 'none',
+                boxShadow: activeRole === 'inspector' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              <UserCheck size={16} /> LMO Inspector
+              <UserCheck size={15} /> LMO Inspector
             </button>
             <button 
               onClick={() => { setActiveRole('public'); handleVerifyCert(certQuery); }}
               style={{
-                background: activeRole === 'public' ? '#2563eb' : 'transparent',
-                color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px'
+                backgroundColor: activeRole === 'public' ? '#ffffff' : 'transparent',
+                color: activeRole === 'public' ? '#0f172a' : '#64748b',
+                border: activeRole === 'public' ? '1px solid #cbd5e1' : 'none',
+                boxShadow: activeRole === 'public' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              <QrCode size={16} /> Public QR Portal
+              <QrCode size={15} /> Citizen QR
             </button>
           </div>
+
+          {/* Current User Chip & Switch Role / Logout */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              padding: '4px 10px',
+              borderRadius: '9999px'
+            }}>
+              <div style={{
+                width: '26px',
+                height: '26px',
+                borderRadius: '50%',
+                backgroundColor: '#e2e8f0',
+                color: '#334155',
+                fontSize: '0.72rem',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {currentUser.name ? currentUser.name[0] : 'U'}
+              </div>
+              <div style={{ fontSize: '0.78rem', lineHeight: 1.2 }}>
+                <span style={{ fontWeight: '600', color: '#0f172a' }}>{currentUser.name}</span>
+                <span style={{ color: '#64748b', marginLeft: '4px', fontSize: '0.7rem' }}>({currentUser.role})</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setCurrentUser(null)}
+              title="Logout and select another role"
+              style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '6px 10px',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                color: '#64748b',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <LogOut size={13} /> Switch Role
+            </button>
+          </div>
+
         </div>
       </header>
 
@@ -343,8 +527,8 @@ export default function App() {
       {toast && (
         <div style={{
           position: 'fixed', top: '20px', right: '20px', zIndex: 9999,
-          background: toast.type === 'error' ? '#ef4444' : '#10b981', color: '#fff',
-          padding: '12px 20px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          backgroundColor: toast.type === 'error' ? '#ef4444' : '#10b981', color: '#ffffff',
+          padding: '12px 20px', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
           display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', fontWeight: '500'
         }}>
           {toast.type === 'error' ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
@@ -353,26 +537,55 @@ export default function App() {
       )}
 
       {/* Main Container */}
-      <main style={{ maxWidth: '1280px', margin: '24px auto', padding: '0 20px', flex: 1, width: '100%' }}>
+      <main style={{ maxWidth: '1280px', margin: '20px auto', padding: '0 20px', flex: 1, width: '100%' }}>
         
-        {/* VIEW 1: STATE ADMIN & INTEGRITY DASHBOARD */}
+        {/* INTERACTIVE WORKFLOW GUIDE (Visual 5-Step Lifecycle Simulator) */}
+        <WorkflowGuide 
+          currentRole={activeRole} 
+          onNavigateStep={handleNavigateStep} 
+          chainValid={chainStatus?.valid !== false}
+        />
+
+        {/* ========================================================================= */}
+        {/* VIEW 1: STATE ADMIN & INTEGRITY DASHBOARD                                 */}
+        {/* ========================================================================= */}
         {activeRole === 'admin' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h1 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#0f172a' }}>State Legal Metrology Controller Surveillance</h1>
-                <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Real-time surveillance, behavioral fraud detection & cryptographic audit log</p>
+                <h1 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a' }}>
+                  State Legal Metrology Controller Surveillance
+                </h1>
+                <p style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                  Real-time algorithmic surveillance, behavioral fraud detection & cryptographic tamper audit
+                </p>
               </div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button 
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`${API_BASE}/notifications/trigger-expiry-sweep`, { method: 'POST' });
+                      const data = await res.json();
+                      if (data.success) {
+                        showToast(`WhatsApp Sweep Completed: ${data.dispatched} notices queued!`);
+                      }
+                    } catch (e) {
+                      showToast('Sweep failed', 'error');
+                    }
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#059669', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '600' }}
+                >
+                  <MessageSquare size={14} /> WhatsApp Expiry Sweep
+                </button>
+                <button 
                   onClick={handleRunAnomalyEngine}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#4338ca', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#7c3aed', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '600' }}
                 >
                   <Sparkles size={14} /> Run Anomaly Engine
                 </button>
                 <button 
                   onClick={fetchData}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#e2e8f0', border: 'none', padding: '8px 14px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', color: '#334155', padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '600' }}
                 >
                   <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                 </button>
@@ -381,21 +594,21 @@ export default function App() {
 
             {/* Cryptographic Chain Status Banner with Live Tamper Demo Controls */}
             <div style={{
-              background: chainStatus?.valid ? '#f0fdf4' : '#fef2f2',
+              backgroundColor: chainStatus?.valid ? '#f0fdf4' : '#fef2f2',
               border: `1px solid ${chainStatus?.valid ? '#bbf7d0' : '#fecaca'}`,
-              borderRadius: '10px', padding: '16px', marginBottom: '24px',
+              borderRadius: '12px', padding: '16px 20px', marginBottom: '24px',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ background: chainStatus?.valid ? '#22c55e' : '#ef4444', color: '#fff', padding: '10px', borderRadius: '8px' }}>
+                <div style={{ backgroundColor: chainStatus?.valid ? '#22c55e' : '#ef4444', color: '#ffffff', padding: '10px', borderRadius: '10px' }}>
                   <Lock size={20} />
                 </div>
                 <div>
                   <h3 style={{ fontSize: '0.95rem', fontWeight: '700', color: chainStatus?.valid ? '#166534' : '#991b1b' }}>
                     Cryptographic SHA-256 Hash Chain: {chainStatus?.valid ? 'SECURE & VERIFIED' : 'TAMPERING DETECTED!'}
                   </h3>
-                  <p style={{ fontSize: '0.8rem', color: '#475569', marginTop: '2px' }}>
-                    {chainStatus?.message} Head Hash: <code style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px' }}>{chainStatus?.head_hash?.substring(0, 20)}...</code>
+                  <p style={{ fontSize: '0.78rem', color: '#475569', marginTop: '2px' }}>
+                    {chainStatus?.message} Head Hash: <code style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', padding: '2px 6px', borderRadius: '4px' }}>{chainStatus?.head_hash?.substring(0, 20)}...</code>
                   </p>
                 </div>
               </div>
@@ -410,7 +623,7 @@ export default function App() {
                 {chainStatus?.valid ? (
                   <button 
                     onClick={handleSimulateTamper}
-                    style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#dc2626', padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{ backgroundColor: '#fee2e2', border: '1px solid #fca5a5', color: '#dc2626', padding: '8px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
                     title="Deliberately edits a DB record to demonstrate cryptographic audit detection"
                   >
                     <AlertOctagon size={13} /> Simulate DB Tamper (Demo)
@@ -418,7 +631,7 @@ export default function App() {
                 ) : (
                   <button 
                     onClick={handleRestoreChain}
-                    style={{ background: '#22c55e', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{ backgroundColor: '#22c55e', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
                     <RotateCcw size={13} /> Restore Chain
                   </button>
@@ -430,48 +643,48 @@ export default function App() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '28px' }}>
               
               {/* Behavioral Anomaly Card with Drill-Down */}
-              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <AlertTriangle color="#dc2626" size={20} />
-                    <h2 style={{ fontSize: '1rem', fontWeight: '700' }}>Active Behavioral Red-Flags</h2>
+                    <AlertTriangle color="#dc2626" size={18} />
+                    <h2 style={{ fontSize: '0.95rem', fontWeight: '700', color: '#0f172a' }}>Active Behavioral Red-Flags</h2>
                   </div>
-                  <span style={{ background: '#fee2e2', color: '#dc2626', fontSize: '0.75rem', fontWeight: '700', padding: '2px 8px', borderRadius: '12px' }}>
+                  <span style={{ backgroundColor: '#fee2e2', color: '#dc2626', fontSize: '0.72rem', fontWeight: '700', padding: '2px 8px', borderRadius: '9999px' }}>
                     {riskFlags.length} Anomalies
                   </span>
                 </div>
                 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {riskFlags.map((flag) => (
                     <div 
                       key={flag.id} 
                       onClick={() => setSelectedFlagForDrillDown(flag)}
                       style={{ 
-                        background: '#fff1f2', 
+                        backgroundColor: '#fff1f2', 
                         border: '1px solid #fecdd3', 
-                        borderRadius: '8px', 
+                        borderRadius: '10px', 
                         padding: '12px', 
                         cursor: 'pointer',
                         transition: 'transform 0.15s, box-shadow 0.15s'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px rgba(225, 29, 72, 0.15)'}
+                      onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px rgba(225, 29, 72, 0.12)'}
                       onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                        <span style={{ fontWeight: '700', fontSize: '0.85rem', color: '#9f1239' }}>{flag.flag_type}</span>
+                        <span style={{ fontWeight: '700', fontSize: '0.82rem', color: '#9f1239' }}>{flag.flag_type}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ background: '#be123c', color: '#fff', fontSize: '0.7rem', fontWeight: '700', padding: '2px 6px', borderRadius: '4px' }}>
+                          <span style={{ backgroundColor: '#be123c', color: '#fff', fontSize: '0.68rem', fontWeight: '700', padding: '2px 6px', borderRadius: '4px' }}>
                             Score: {flag.score}
                           </span>
-                          <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                            <Eye size={12} /> View
+                          <span style={{ fontSize: '0.68rem', color: '#2563eb', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                            <Eye size={12} /> Inspect
                           </span>
                         </div>
                       </div>
-                      <p style={{ fontSize: '0.75rem', color: '#4c0519', marginBottom: '4px' }}>
+                      <p style={{ fontSize: '0.72rem', color: '#4c0519', marginBottom: '4px' }}>
                         <strong>Target:</strong> {flag.details?.officer_name || flag.entity_type}
                       </p>
-                      <p style={{ fontSize: '0.75rem', color: '#881337', lineHeight: '1.4' }}>
+                      <p style={{ fontSize: '0.72rem', color: '#881337', lineHeight: '1.4' }}>
                         {flag.details?.reason || flag.details?.description}
                       </p>
                     </div>
@@ -484,29 +697,29 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Inspector Integrity Roster */}
-              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              {/* Inspector Integrity Leaderboard */}
+              <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <UserCheck color="#2563eb" size={20} />
-                    <h2 style={{ fontSize: '1rem', fontWeight: '700' }}>Inspector Integrity Leaderboard</h2>
+                    <UserCheck color="#2563eb" size={18} />
+                    <h2 style={{ fontSize: '0.95rem', fontWeight: '700', color: '#0f172a' }}>Inspector Integrity Leaderboard</h2>
                   </div>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Jurisdiction: Pune Urban</span>
+                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Jurisdiction: Pune Urban</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {inspectorsSummary.map((insp) => (
-                    <div key={insp.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                    <div key={insp.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
                       <div>
-                        <p style={{ fontWeight: '600', fontSize: '0.85rem' }}>{insp.name}</p>
-                        <p style={{ fontSize: '0.75rem', color: '#64748b' }}>Assigned: {insp.total_assigned} | Verified: {insp.completed_tests}</p>
+                        <p style={{ fontWeight: '600', fontSize: '0.82rem', color: '#0f172a' }}>{insp.name}</p>
+                        <p style={{ fontSize: '0.72rem', color: '#64748b' }}>Assigned: {insp.total_assigned} | Verified: {insp.completed_tests}</p>
                       </div>
                       <div>
                         {insp.active_flags > 0 ? (
-                          <span style={{ background: '#fee2e2', color: '#dc2626', fontSize: '0.75rem', fontWeight: '700', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ backgroundColor: '#fee2e2', color: '#dc2626', fontSize: '0.72rem', fontWeight: '700', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <AlertTriangle size={12} /> {insp.active_flags} Flags ({insp.max_risk_score} pts)
                           </span>
                         ) : (
-                          <span style={{ background: '#dcfce7', color: '#15803d', fontSize: '0.75rem', fontWeight: '700', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ backgroundColor: '#dcfce7', color: '#15803d', fontSize: '0.72rem', fontWeight: '700', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <CheckCircle2 size={12} /> Clean Profile
                           </span>
                         )}
@@ -518,12 +731,14 @@ export default function App() {
             </div>
 
             {/* Applications Surveillance Table */}
-            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-              <h2 style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '14px' }}>Verification Applications & Anti-Collusion Allocation Log</h2>
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+              <h2 style={{ fontSize: '0.95rem', fontWeight: '700', color: '#0f172a', marginBottom: '14px' }}>
+                Verification Applications & Anti-Collusion Allocation Log
+              </h2>
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.78rem' }}>
                   <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
                       <th style={{ padding: '10px' }}>App No.</th>
                       <th style={{ padding: '10px' }}>Applicant</th>
                       <th style={{ padding: '10px' }}>Instrument</th>
@@ -535,16 +750,16 @@ export default function App() {
                   <tbody>
                     {applications.map(app => (
                       <tr key={app.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '10px', fontWeight: '600' }}>{app.application_number}</td>
+                        <td style={{ padding: '10px', fontWeight: '600', color: '#0f172a' }}>{app.application_number}</td>
                         <td style={{ padding: '10px' }}>{app.applicant_name} ({app.org_name})</td>
                         <td style={{ padding: '10px' }}>{app.make} {app.model}</td>
                         <td style={{ padding: '10px', fontWeight: '500' }}>{app.assigned_officer_name || 'Unassigned'}</td>
-                        <td style={{ padding: '10px', color: '#475569', fontSize: '0.75rem' }}>{app.assignment_reason}</td>
+                        <td style={{ padding: '10px', color: '#64748b', fontSize: '0.72rem' }}>{app.assignment_reason}</td>
                         <td style={{ padding: '10px' }}>
                           <span style={{ 
-                            background: app.status === 'COMPLETED' ? '#dcfce7' : '#fef3c7', 
+                            backgroundColor: app.status === 'COMPLETED' ? '#dcfce7' : '#fef3c7', 
                             color: app.status === 'COMPLETED' ? '#166534' : '#92400e',
-                            padding: '3px 8px', borderRadius: '12px', fontWeight: '700', fontSize: '0.7rem'
+                            padding: '3px 8px', borderRadius: '12px', fontWeight: '700', fontSize: '0.68rem'
                           }}>
                             {app.status}
                           </span>
@@ -558,74 +773,111 @@ export default function App() {
           </div>
         )}
 
-        {/* VIEW 2: MERCHANT / SHOP OWNER PORTAL */}
+        {/* ========================================================================= */}
+        {/* VIEW 2: MERCHANT / SHOP OWNER PORTAL                                      */}
+        {/* ========================================================================= */}
         {activeRole === 'merchant' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h1 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Sharma Provisions & Retail Pvt Ltd</h1>
-                <p style={{ fontSize: '0.875rem', color: '#64748b' }}>GST: 27AABCS1429B1Z2 | Location: Laxmi Road Market, Pune</p>
+                <h1 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a' }}>Sharma Provisions & Retail Pvt Ltd</h1>
+                <p style={{ fontSize: '0.82rem', color: '#64748b' }}>GST: 27AABCS1429B1Z2 | Location: Laxmi Road Market, Pune</p>
               </div>
               <button 
                 onClick={() => setNewInstModal(true)}
-                style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}
+                style={{ backgroundColor: '#2563eb', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 + Register New Scale (with Nameplate)
               </button>
             </div>
 
             {/* WhatsApp Integration Banner */}
-            <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '12px 16px', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <MessageSquare color="#059669" size={20} />
-              <p style={{ fontSize: '0.8rem', color: '#065f46' }}>
-                <strong>WhatsApp Channel Active:</strong> Re-verification expiry reminders and digital certificates are delivered directly to registered mobile <strong>+91 9822998811</strong>.
-              </p>
+            <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', padding: '14px 18px', borderRadius: '12px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ backgroundColor: '#25d366', color: '#ffffff', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(37, 211, 102, 0.2)' }}>
+                  <MessageSquare size={18} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#065f46' }}>WhatsApp Business Cloud Channel</span>
+                    <span style={{ backgroundColor: '#dcfce7', color: '#15803d', fontSize: '0.65rem', fontWeight: '700', padding: '1px 6px', borderRadius: '4px', border: '1px solid #86efac' }}>ACTIVE</span>
+                  </div>
+                  <p style={{ fontSize: '0.74rem', color: '#047857' }}>
+                    Automated statutory renewal notices and verified digital certificates delivered to <strong>+91 9822998811</strong>.
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setWhatsAppModalOpen(true)}
+                style={{ backgroundColor: '#059669', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+              >
+                <MessageSquare size={14} /> Open Live WhatsApp Thread
+              </button>
             </div>
 
             {/* Registered Instruments Grid */}
-            <h2 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '14px' }}>My Weighing & Measuring Instruments</h2>
+            <h2 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '14px' }}>My Commercial Weighing Instruments</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
               {instruments.filter(i => i.owner_id === 'usr-mer-01').map(inst => (
-                <div key={inst.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                <div key={inst.id} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                     <div>
-                      <h3 style={{ fontSize: '1rem', fontWeight: '700' }}>{inst.make} - {inst.model}</h3>
-                      <p style={{ fontSize: '0.75rem', color: '#64748b' }}>Serial No: <code>{inst.serial_number}</code></p>
+                      <h3 style={{ fontSize: '0.95rem', fontWeight: '700', color: '#0f172a' }}>{inst.make} - {inst.model}</h3>
+                      <p style={{ fontSize: '0.72rem', color: '#64748b' }}>Serial No: <code>{inst.serial_number}</code></p>
                     </div>
                     <span style={{ 
-                      background: inst.verification_status === 'VERIFIED' ? '#dcfce7' : '#fef3c7',
+                      backgroundColor: inst.verification_status === 'VERIFIED' ? '#dcfce7' : '#fef3c7',
                       color: inst.verification_status === 'VERIFIED' ? '#15803d' : '#92400e',
-                      padding: '3px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '700'
+                      padding: '3px 8px', borderRadius: '12px', fontSize: '0.68rem', fontWeight: '700'
                     }}>
                       {inst.verification_status}
                     </span>
                   </div>
 
-                  <div style={{ fontSize: '0.8rem', color: '#334155', marginBottom: '14px', lineHeight: '1.6' }}>
-                    <div><strong>Capacity:</strong> {inst.capacity}</div>
-                    <div><strong>Class:</strong> {inst.accuracy_class}</div>
-                    <div><strong>Physical Binding:</strong> <span style={{ color: inst.last_photo_match_status === 'MATCH' ? '#16a34a' : '#ea580c', fontWeight: '600' }}>Nameplate {inst.last_photo_match_status}</span></div>
-                    {inst.certificate_number && (
-                      <div style={{ marginTop: '6px', background: '#f8fafc', padding: '6px 8px', borderRadius: '6px' }}>
-                        <strong>Certificate:</strong> {inst.certificate_number} (Valid to: {inst.valid_until})
-                      </div>
-                    )}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.75rem', marginBottom: '14px', backgroundColor: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
+                    <div><span style={{ color: '#64748b' }}>Capacity:</span> <strong>{inst.capacity}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Accuracy Class:</span> <strong>{inst.accuracy_class}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Last Verified:</span> <strong>{inst.last_verified_date || 'Never'}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Expires:</span> <strong>{inst.reverification_due || 'Pending'}</strong></div>
+                  </div>
+
+                  <div style={{ marginBottom: '14px', border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                    <div style={{ fontSize: '0.68rem', fontWeight: '700', padding: '6px 10px', backgroundColor: '#f1f5f9', color: '#334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Physical Nameplate Binding (Registered Photo):</span>
+                      <span style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        ● Bound
+                      </span>
+                    </div>
+                    <div style={{ padding: '8px', backgroundColor: '#ffffff' }}>
+                      <NameplateBadge 
+                        photoUrl={inst.nameplate_photo_url}
+                        make={inst.make}
+                        model={inst.model}
+                        serial={inst.serial_number}
+                        capacity={inst.capacity}
+                        accuracyClass={inst.accuracy_class}
+                      />
+                    </div>
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    {inst.verification_status !== 'VERIFIED' ? (
+                    <button 
+                      onClick={() => handleApplyVerification(inst.id)}
+                      style={{ flex: 1, backgroundColor: '#2563eb', color: '#ffffff', border: 'none', padding: '8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '600' }}
+                    >
+                      Apply for Re-Verification
+                    </button>
+                    {inst.current_certificate_number && (
                       <button 
-                        onClick={() => handleApplyVerification(inst.id)}
-                        style={{ flex: 1, background: '#2563eb', color: '#fff', border: 'none', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600' }}
+                        onClick={() => {
+                          setCertQuery(inst.current_certificate_number);
+                          setActiveRole('public');
+                          handleVerifyCert(inst.current_certificate_number);
+                        }}
+                        style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', padding: '8px 12px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '600' }}
                       >
-                        Apply for Verification (Blind Allocated)
-                      </button>
-                    ) : (
-                      <button 
-                        onClick={() => { setActiveRole('public'); handleVerifyCert(inst.certificate_number); }}
-                        style={{ flex: 1, background: '#f1f5f9', color: '#0f172a', border: '1px solid #cbd5e1', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}
-                      >
-                        <QrCode size={14} /> View QR Certificate
+                        View QR
                       </button>
                     )}
                   </div>
@@ -633,56 +885,39 @@ export default function App() {
               ))}
             </div>
 
-            {/* Registration Modal with Mandatory Nameplate Capture (Layer 3 - Physical-Digital Binding) */}
+            {/* Merchant New Scale Modal */}
             {newInstModal && (
               <div className="modal-backdrop">
-                <div className="modal-dialog" style={{ background: '#fff', borderRadius: '12px', padding: '24px', maxWidth: '520px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '4px' }}>Register Instrument with Physical Nameplate</h2>
-                  <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '16px' }}>Mandatory under Legal Metrology Act Section 24 for physical-digital binding</p>
-                  
-                  <form onSubmit={handleRegisterInstrument} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Manufacturer (Make) *</label>
-                      <input 
-                        type="text" required value={instForm.make} onChange={e => setInstForm({...instForm, make: e.target.value})}
-                        placeholder="e.g. Essae-Teraoka"
-                        style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Model *</label>
-                      <input 
-                        type="text" required value={instForm.model} onChange={e => setInstForm({...instForm, model: e.target.value})}
-                        placeholder="e.g. DS-215N Counter Scale"
-                        style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Serial Number (As shown on metallic plate) *</label>
-                      <input 
-                        type="text" required value={instForm.serial_number} onChange={e => setInstForm({...instForm, serial_number: e.target.value})}
-                        placeholder="e.g. ESS-2026-88192"
-                        style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Capacity & Least Count *</label>
-                      <input 
-                        type="text" required value={instForm.capacity} onChange={e => setInstForm({...instForm, capacity: e.target.value})}
-                        style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
-                      />
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', maxWidth: '520px', width: '100%', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#0f172a' }}>Register New Scale with Physical Binding</h3>
+                    <button onClick={() => setNewInstModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#64748b' }}>×</button>
+                  </div>
+                  <form onSubmit={handleRegisterInstrument}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '600', marginBottom: '4px' }}>Manufacturer / Make</label>
+                        <input type="text" required value={instForm.make} onChange={e => setInstForm({...instForm, make: e.target.value})} placeholder="e.g. Phoenix Scales" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }} />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '600', marginBottom: '4px' }}>Model</label>
+                        <input type="text" required value={instForm.model} onChange={e => setInstForm({...instForm, model: e.target.value})} placeholder="e.g. PX-300" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }} />
+                      </div>
                     </div>
 
-                    {/* M2 Mandatory Nameplate Camera Capture */}
-                    <CameraCapture 
-                      label="Mandatory Metallic Nameplate Photo" 
-                      required={true}
-                      onCapture={(dataUrl) => setInstForm({...instForm, nameplate_photo_url: dataUrl})}
-                    />
+                    <div style={{ marginBottom: '12px' }}>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '600', marginBottom: '4px' }}>Machine Serial Number (Engraved)</label>
+                      <input type="text" required value={instForm.serial_number} onChange={e => setInstForm({...instForm, serial_number: e.target.value})} placeholder="e.g. SN-2026-PHX-994" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }} />
+                    </div>
 
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                      <button type="button" onClick={() => setNewInstModal(false)} style={{ flex: 1, padding: '10px', background: '#e2e8f0', border: 'none', borderRadius: '6px', fontWeight: '600' }}>Cancel</button>
-                      <button type="submit" style={{ flex: 1, padding: '10px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600' }}>Submit & Save Scale</button>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '600', marginBottom: '4px' }}>Mandatory Nameplate Photo Proof (Camera / File)</label>
+                      <CameraCapture onCapture={(dataUrl) => setInstForm({...instForm, nameplate_photo_url: dataUrl})} />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => setNewInstModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#e2e8f0', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '0.8rem' }}>Cancel</button>
+                      <button type="submit" style={{ flex: 1, padding: '10px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '0.8rem' }}>Register Scale</button>
                     </div>
                   </form>
                 </div>
@@ -691,128 +926,158 @@ export default function App() {
           </div>
         )}
 
-        {/* VIEW 3: LMO INSPECTOR FIELD PORTAL (M2 Core Deliverable) */}
+        {/* ========================================================================= */}
+        {/* VIEW 3: INSPECTOR (LMO) VERIFICATION PORTAL                                */}
+        {/* ========================================================================= */}
         {activeRole === 'inspector' && (
           <div>
-            <div style={{ marginBottom: '20px' }}>
-              <h1 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Inspector Field Execution Portal</h1>
-              <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Officer: Rajesh Kumar (LMO-Pune Central) | Clean Integrity Record</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h1 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a' }}>
+                  LMO Field Verification Portal
+                </h1>
+                <p style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                  Officer: <strong>Rajesh Kumar (Badge #MH-LMO-401)</strong> | Jurisdiction: Pune Central
+                </p>
+              </div>
+              <span style={{ backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '6px 12px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: '700' }}>
+                Proof of Physical Presence: Camera + GPS Enforced
+              </span>
             </div>
 
-            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-              <h2 style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '14px' }}>Assigned Field Verifications (Today's Schedule)</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {applications.filter(a => a.status === 'SCHEDULED').map(app => (
-                  <div key={app.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '12px' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontWeight: '700', fontSize: '0.9rem' }}>{app.application_number}</span>
-                        <span style={{ background: '#e0e7ff', color: '#3730a3', fontSize: '0.7rem', fontWeight: '700', padding: '2px 8px', borderRadius: '12px' }}>Blind Assigned</span>
-                      </div>
-                      <p style={{ fontSize: '0.8rem', color: '#334155', marginTop: '4px' }}><strong>Shop:</strong> {app.org_name} ({app.premises_address})</p>
-                      <p style={{ fontSize: '0.75rem', color: '#64748b' }}>Instrument: {app.make} {app.model} (S/N: {app.serial_number})</p>
-                    </div>
-                    <button 
-                      onClick={() => { 
-                        setSelectedApp(app); 
-                        setInspectModal(true); 
-                        setInspectForm({
-                          zero_error: '0.0',
-                          repeatability_error: '0.01',
-                          eccentricity_error: '0.01',
-                          discrimination_pass: 1,
-                          nameplate_match: 'MATCH',
-                          result: 'PASS',
-                          photo_url: '',
-                          geo_lat: 18.5167,
-                          geo_lng: 73.8562
-                        });
-                      }}
-                      style={{ background: '#059669', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}
-                    >
-                      <Camera size={14} /> Conduct Evidence-Bound Test
-                    </button>
-                  </div>
-                ))}
-                {applications.filter(a => a.status === 'SCHEDULED').length === 0 && (
-                  <p style={{ fontSize: '0.85rem', color: '#64748b', textAlign: 'center', padding: '20px' }}>No pending scheduled inspections today.</p>
-                )}
+            {/* Scheduled Verification Tasks */}
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+              <h2 style={{ fontSize: '0.95rem', fontWeight: '700', color: '#0f172a', marginBottom: '14px' }}>
+                Assigned Inspection Schedule (Blind Anti-Collusion Allocation)
+              </h2>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.78rem' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
+                      <th style={{ padding: '10px' }}>Application</th>
+                      <th style={{ padding: '10px' }}>Shop / Merchant</th>
+                      <th style={{ padding: '10px' }}>Location</th>
+                      <th style={{ padding: '10px' }}>Scale Info</th>
+                      <th style={{ padding: '10px' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {applications.map(app => (
+                      <tr key={app.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '10px', fontWeight: '600' }}>{app.application_number}</td>
+                        <td style={{ padding: '10px' }}>{app.applicant_name} ({app.org_name})</td>
+                        <td style={{ padding: '10px' }}>{app.premises_address || 'Laxmi Road Market, Pune'}</td>
+                        <td style={{ padding: '10px' }}>{app.make} {app.model}</td>
+                        <td style={{ padding: '10px' }}>
+                          <button 
+                            onClick={() => {
+                              setSelectedApp(app);
+                              setInspectModal(true);
+                            }}
+                            style={{ backgroundColor: '#059669', color: '#ffffff', border: 'none', padding: '6px 14px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <Camera size={13} /> Conduct Physical Verification
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            {/* Test Entry Modal (Evidence-Bound & Physical-Digital Binding) */}
+            {/* Verification Modal with Camera & GPS & Side-by-Side Review */}
             {inspectModal && selectedApp && (
               <div className="modal-backdrop">
-                <div className="modal-dialog" style={{ background: '#fff', borderRadius: '12px', padding: '24px', maxWidth: '580px', width: '100%', maxHeight: '92vh', overflowY: 'auto' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '4px' }}>Conduct Evidence-Bound Verification</h2>
-                  <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '14px' }}>
-                    Application: <strong>{selectedApp.application_number}</strong> | Instrument: {selectedApp.make} {selectedApp.model}
-                  </p>
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#0f172a' }}>Conduct Evidence-Bound Physical Verification</h3>
+                      <p style={{ fontSize: '0.72rem', color: '#64748b' }}>App: {selectedApp.application_number} • Scale: {selectedApp.make} {selectedApp.model}</p>
+                    </div>
+                    <button onClick={() => setInspectModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#64748b' }}>×</button>
+                  </div>
 
-                  {/* 1. M2 Geo-Location Enforcer Component */}
-                  <GeoLocationEnforcer 
-                    onLocationUpdate={(loc) => setInspectForm(f => ({ ...f, geo_lat: loc.lat, geo_lng: loc.lng }))}
-                  />
+                  <form onSubmit={handleSubmitInspection}>
+                    
+                    {/* Layer 2: Live Viewfinder Camera Snapshot */}
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>
+                        1. Mandatory Live Display Photo Proof (HTML5 MediaDevices)
+                      </label>
+                      <CameraCapture onCapture={(url) => setInspectForm({...inspectForm, photo_url: url})} />
+                    </div>
 
-                  {/* 2. M2 Live Camera Capture Viewfinder */}
-                  <CameraCapture 
-                    label="Live Scale Display Photo Evidence"
-                    required={true}
-                    onCapture={(dataUrl) => setInspectForm(f => ({ ...f, photo_url: dataUrl }))}
-                  />
+                    {/* Layer 2: GPS Location Enforcer */}
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>
+                        2. Proof of Physical Presence (HTML5 Geolocation API)
+                      </label>
+                      <GeoLocationEnforcer onLocation={(coords) => setInspectForm({...inspectForm, geo_lat: coords.lat, geo_lng: coords.lng})} />
+                    </div>
 
-                  {/* 3. M2 Side-by-Side Nameplate Verification Screen */}
-                  <NameplateReviewSideBySide 
-                    registeredPhotoUrl={selectedApp.nameplate_photo_url || '/uploads/nameplates/sample.jpg'}
-                    currentPhotoUrl={inspectForm.photo_url}
-                    serialNumber={selectedApp.serial_number}
-                    make={selectedApp.make}
-                    model={selectedApp.model}
-                    selectedStatus={inspectForm.nameplate_match}
-                    onChange={(status) => setInspectForm(f => ({ ...f, nameplate_match: status }))}
-                  />
+                    {/* Layer 3: Physical-Digital Binding Side-by-Side Review */}
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>
+                        3. Physical-Digital Nameplate Review (Side-by-Side Binding)
+                      </label>
+                      <NameplateReviewSideBySide 
+                        registeredPhotoUrl={selectedApp.nameplate_photo_url || 'https://images.unsplash.com/photo-1594911772125-07fc7a2d8d9f?w=600&auto=format&fit=crop&q=60'}
+                        currentLivePhotoUrl={inspectForm.photo_url}
+                        onReviewDecision={(decision) => setInspectForm({...inspectForm, nameplate_match: decision})}
+                      />
+                    </div>
 
-                  {/* 4. Inspection Test Measurements */}
-                  <form onSubmit={handleSubmitInspection} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      <div>
-                        <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Zero Load Error (e)</label>
-                        <input 
-                          type="number" step="0.01" value={inspectForm.zero_error} onChange={e => setInspectForm({...inspectForm, zero_error: e.target.value})}
-                          style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Repeatability Error (e)</label>
-                        <input 
-                          type="number" step="0.01" value={inspectForm.repeatability_error} onChange={e => setInspectForm({...inspectForm, repeatability_error: e.target.value})}
-                          style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
-                        />
+                    {/* Metrological Calibration Test Readings */}
+                    <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
+                      <h4 style={{ fontSize: '0.8rem', fontWeight: '700', color: '#0f172a', marginBottom: '10px' }}>
+                        4. Calibration Standard Error Readings (Legal Metrology General Rules, 2011)
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#64748b' }}>Zero Error (e)</label>
+                          <input type="number" step="0.01" value={inspectForm.zero_error} onChange={e => setInspectForm({...inspectForm, zero_error: e.target.value})} style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#64748b' }}>Repeatability Error (e)</label>
+                          <input type="number" step="0.01" value={inspectForm.repeatability_error} onChange={e => setInspectForm({...inspectForm, repeatability_error: e.target.value})} style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#64748b' }}>Eccentricity Error (e)</label>
+                          <input type="number" step="0.01" value={inspectForm.eccentricity_error} onChange={e => setInspectForm({...inspectForm, eccentricity_error: e.target.value})} style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#64748b' }}>Discrimination Test</label>
+                          <select value={inspectForm.discrimination_pass} onChange={e => setInspectForm({...inspectForm, discrimination_pass: parseInt(e.target.value, 10)})} style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}>
+                            <option value={1}>PASS (Conforms to Class III)</option>
+                            <option value={0}>FAIL (Below Sensitivity)</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
 
-                    <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Overall Result</label>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', marginBottom: '4px' }}>Overall Assessment Result</label>
                       <select 
                         value={inspectForm.result} 
                         onChange={e => setInspectForm({...inspectForm, result: e.target.value})}
-                        style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontWeight: '700', color: inspectForm.result === 'PASS' ? '#15803d' : '#b91c1c' }}
+                        style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem', fontWeight: '600' }}
                       >
                         <option value="PASS">PASS (Conforms to Legal Metrology General Rules)</option>
                         <option value="FAIL">FAIL (Exceeds Maximum Permissible Error)</option>
                       </select>
                     </div>
 
-                    <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.7rem', color: '#64748b' }}>
+                    <div style={{ backgroundColor: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.7rem', color: '#64748b', marginBottom: '14px' }}>
                       <strong>Cryptographic Chaining:</strong> Submitting will compute a SHA-256 hash linking this inspection to the previous block.
                     </div>
 
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                      <button type="button" onClick={() => setInspectModal(false)} style={{ flex: 1, padding: '10px', background: '#e2e8f0', border: 'none', borderRadius: '6px', fontWeight: '600' }}>Cancel</button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => setInspectModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#e2e8f0', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '0.8rem' }}>Cancel</button>
                       <button 
                         type="submit" 
                         disabled={submittingTest}
-                        style={{ flex: 1, padding: '10px', background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        style={{ flex: 1, padding: '10px', backgroundColor: '#059669', color: '#ffffff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                       >
                         {submittingTest ? <RefreshCw size={14} className="animate-spin" /> : null}
                         {submittingTest ? 'Chaining Record...' : 'Submit & Hash-Chain'}
@@ -825,15 +1090,17 @@ export default function App() {
           </div>
         )}
 
-        {/* VIEW 4: PUBLIC CITIZEN QR AUTHENTICATION PORTAL (M2 Deliverable) */}
+        {/* ========================================================================= */}
+        {/* VIEW 4: PUBLIC CITIZEN QR AUTHENTICATION PORTAL                            */}
+        {/* ========================================================================= */}
         {activeRole === 'public' && (
           <div style={{ maxWidth: '680px', margin: '0 auto' }}>
             <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <div style={{ display: 'inline-flex', background: '#dbeafe', padding: '12px', borderRadius: '50%', marginBottom: '12px' }}>
-                <QrCode size={36} color="#1d4ed8" />
+              <div style={{ display: 'inline-flex', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', padding: '12px', borderRadius: '50%', marginBottom: '12px' }}>
+                <QrCode size={36} color="#2563eb" />
               </div>
-              <h1 style={{ fontSize: '1.5rem', fontWeight: '800' }}>Legal Metrology Certificate Authentication</h1>
-              <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Official Government of India Verification Portal under Section 24 of the Act</p>
+              <h1 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a' }}>Legal Metrology Certificate Authentication</h1>
+              <p style={{ fontSize: '0.82rem', color: '#64748b' }}>Official Government of India Verification Portal under Section 24 of the Act</p>
             </div>
 
             {/* Search Input Box */}
@@ -843,11 +1110,11 @@ export default function App() {
                 value={certQuery} 
                 onChange={e => setCertQuery(e.target.value)}
                 placeholder="Enter Certificate Number e.g. MH-PUN-2026-00841"
-                style={{ flex: 1, padding: '12px 16px', border: '2px solid #cbd5e1', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '600' }}
+                style={{ flex: 1, padding: '12px 16px', border: '2px solid #cbd5e1', borderRadius: '8px', fontSize: '0.88rem', fontWeight: '600' }}
               />
               <button 
                 onClick={() => handleVerifyCert(certQuery)}
-                style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                style={{ backgroundColor: '#2563eb', color: '#ffffff', border: 'none', padding: '12px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 <Search size={16} /> Verify
               </button>
@@ -855,36 +1122,36 @@ export default function App() {
 
             {/* Certificate Display Card */}
             {publicCert && (
-              <div style={{ background: '#fff', border: '2px solid #059669', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 12px rgba(5, 150, 105, 0.1)' }}>
+              <div style={{ backgroundColor: '#ffffff', border: '2px solid #059669', borderRadius: '14px', padding: '24px', boxShadow: '0 4px 12px rgba(5, 150, 105, 0.08)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px', marginBottom: '16px' }}>
                   <div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#059669', textTransform: 'uppercase' }}>Authentic Legal Certificate</span>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: '800' }}>{publicCert.certificate_number}</h2>
+                    <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#059669', textTransform: 'uppercase' }}>Authentic Legal Certificate</span>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>{publicCert.certificate_number}</h2>
                   </div>
-                  <span style={{ background: '#dcfce7', color: '#15803d', padding: '6px 14px', borderRadius: '20px', fontWeight: '800', fontSize: '0.85rem' }}>
+                  <span style={{ backgroundColor: '#dcfce7', color: '#15803d', padding: '6px 14px', borderRadius: '20px', fontWeight: '800', fontSize: '0.82rem' }}>
                     ● {publicCert.status}
                   </span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '0.85rem', marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '0.82rem', marginBottom: '20px' }}>
                   <div>
-                    <p style={{ color: '#64748b', fontSize: '0.75rem' }}>Shop / Merchant</p>
-                    <p style={{ fontWeight: '700' }}>{publicCert.merchant.organization}</p>
-                    <p style={{ fontSize: '0.75rem', color: '#475569' }}>{publicCert.instrument.premises_address}</p>
+                    <p style={{ color: '#64748b', fontSize: '0.72rem' }}>Shop / Merchant</p>
+                    <p style={{ fontWeight: '700', color: '#0f172a' }}>{publicCert.merchant?.organization || 'Sharma Provisions'}</p>
+                    <p style={{ fontSize: '0.72rem', color: '#475569' }}>{publicCert.instrument?.premises_address}</p>
                   </div>
                   <div>
-                    <p style={{ color: '#64748b', fontSize: '0.75rem' }}>Weighing Instrument</p>
-                    <p style={{ fontWeight: '700' }}>{publicCert.instrument.make} {publicCert.instrument.model}</p>
-                    <p style={{ fontSize: '0.75rem', color: '#475569' }}>Serial No: <code>{publicCert.instrument.serial_number}</code></p>
+                    <p style={{ color: '#64748b', fontSize: '0.72rem' }}>Weighing Instrument</p>
+                    <p style={{ fontWeight: '700', color: '#0f172a' }}>{publicCert.instrument?.make} {publicCert.instrument?.model}</p>
+                    <p style={{ fontSize: '0.72rem', color: '#475569' }}>Serial No: <code>{publicCert.instrument?.serial_number}</code></p>
                   </div>
                   <div>
-                    <p style={{ color: '#64748b', fontSize: '0.75rem' }}>Certificate Validity</p>
+                    <p style={{ color: '#64748b', fontSize: '0.72rem' }}>Certificate Validity</p>
                     <p style={{ fontWeight: '700', color: '#15803d' }}>Valid until {publicCert.valid_until}</p>
                   </div>
                   <div>
-                    <p style={{ color: '#64748b', fontSize: '0.75rem' }}>Verified By LMO</p>
-                    <p style={{ fontWeight: '700' }}>{publicCert.inspector.name}</p>
-                    <p style={{ fontSize: '0.7rem', color: '#64748b' }}>Block: <code>{publicCert.inspector.record_hash?.substring(0, 16)}...</code></p>
+                    <p style={{ color: '#64748b', fontSize: '0.72rem' }}>Verified By LMO</p>
+                    <p style={{ fontWeight: '700', color: '#0f172a' }}>{publicCert.inspector?.name}</p>
+                    <p style={{ fontSize: '0.68rem', color: '#64748b' }}>Block: <code>{publicCert.inspector?.record_hash?.substring(0, 16)}...</code></p>
                   </div>
                 </div>
 
@@ -893,7 +1160,7 @@ export default function App() {
                   <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Notice discrepancy or short-weighting?</span>
                   <button 
                     onClick={() => setPublicConcernOpen(true)}
-                    style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '8px 14px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    style={{ backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '8px 14px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     <AlertTriangle size={14} /> Report a Concern (No Login)
                   </button>
@@ -926,11 +1193,33 @@ export default function App() {
         />
       )}
 
-      {/* Footer */}
-      <footer style={{ background: '#0f172a', color: '#94a3b8', padding: '16px 24px', fontSize: '0.75rem', borderTop: '1px solid #1e293b' }}>
+      {/* M3 Modal: WhatsApp Business Cloud Simulator Modal */}
+      {whatsAppModalOpen && (
+        <WhatsAppSimulatorModal 
+          userId={currentUser?.id || 'usr-mer-01'}
+          userName={currentUser?.name || 'Ramesh Sharma'}
+          phone={currentUser?.phone || '+91 9822998811'}
+          onClose={() => setWhatsAppModalOpen(false)}
+          onOpenCertificate={(certNo) => {
+            setCertQuery(certNo);
+            setActiveRole('public');
+            handleVerifyCert(certNo);
+          }}
+        />
+      )}
+
+      {/* Light Theme Clean Footer */}
+      <footer style={{
+        backgroundColor: '#ffffff',
+        borderTop: '1px solid #e2e8f0',
+        color: '#64748b',
+        padding: '16px 24px',
+        fontSize: '0.75rem',
+        marginTop: 'auto'
+      }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
           <div>
-            VerifyMET+ Integrity System | Legal Metrology Act, 2009 & General Rules, 2011
+            VerifyMET+ National Integrity System • Legal Metrology Act, 2009 Standards
           </div>
           <div style={{ display: 'flex', gap: '16px' }}>
             <span>Evidence-Bound Testing (3.1)</span>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, ShieldCheck, Eye, AlertOctagon } from 'lucide-react';
+import NameplateBadge from './NameplateBadge';
 
 export default function NameplateReviewSideBySide({ 
   registeredPhotoUrl, 
@@ -32,24 +33,13 @@ export default function NameplateReviewSideBySide({
             <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#334155' }}>Original Nameplate</span>
             <span style={{ fontSize: '0.65rem', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px' }}>Registration Base</span>
           </div>
-          <div style={{ height: '140px', background: '#e2e8f0', borderRadius: '6px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {registeredPhotoUrl ? (
-              <img 
-                src={registeredPhotoUrl.startsWith('http') || registeredPhotoUrl.startsWith('data:') ? registeredPhotoUrl : `http://localhost:5000${registeredPhotoUrl}`}
-                alt="Registered Nameplate" 
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.parentNode.innerHTML = `<div style="text-align:center;padding:10px;color:#64748b;font-size:0.75rem;"><strong>${make || 'Essae'}</strong><br/>S/N: ${serialNumber}<br/>(Reference Image)</div>`;
-                }}
-              />
-            ) : (
-              <div style={{ textAlign: 'center', padding: '10px', color: '#64748b', fontSize: '0.75rem' }}>
-                <strong>{make} {model}</strong><br/>
-                S/N: {serialNumber}<br/>
-                (Reference Record)
-              </div>
-            )}
+          <div style={{ borderRadius: '6px', overflow: 'hidden' }}>
+            <NameplateBadge 
+              photoUrl={registeredPhotoUrl}
+              make={make || 'Essae-Teraoka'}
+              model={model || 'DS-215N'}
+              serial={serialNumber || 'ESS-2023-98214'}
+            />
           </div>
         </div>
 

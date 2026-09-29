@@ -12,6 +12,21 @@ app.use(express.json());
 
 // Serve static mock uploads for photos and certificates
 const uploadsDir = path.join(__dirname, '../uploads');
+const fs = require('node:fs');
+
+app.get('/uploads/nameplates/:filename', (req, res) => {
+  const filePath = path.join(uploadsDir, 'nameplates', req.params.filename);
+  if (fs.existsSync(filePath)) {
+    const content = fs.readFileSync(filePath, 'utf8');
+    if (content.trim().startsWith('<svg')) {
+      res.type('image/svg+xml');
+      return res.send(content);
+    }
+    return res.sendFile(filePath);
+  }
+  res.status(404).send('Not found');
+});
+
 app.use('/uploads', express.static(uploadsDir));
 
 // Initialize Database Schema on start
