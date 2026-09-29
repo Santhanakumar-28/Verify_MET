@@ -59,6 +59,7 @@ export default function App() {
 
   // M2 State: Public Concern Modal
   const [publicConcernOpen, setPublicConcernOpen] = useState(false);
+  const [workflowGuideOpen, setWorkflowGuideOpen] = useState(false);
 
   // M2 State: Merchant Register Scale with Nameplate
   const [newInstModal, setNewInstModal] = useState(false);
@@ -406,91 +407,101 @@ export default function App() {
             </div>
           </div>
 
-          {/* Quick Role Switcher (Light Modern Pills) */}
-          <div className="nav-role-switcher" style={{
-            display: 'flex',
-            backgroundColor: '#f1f5f9',
-            padding: '4px',
-            borderRadius: '10px',
-            border: '1px solid #e2e8f0',
-            gap: '4px'
-          }}>
-            <button 
-              onClick={() => setActiveRole('admin')}
-              style={{
-                backgroundColor: activeRole === 'admin' ? '#ffffff' : 'transparent',
-                color: activeRole === 'admin' ? '#7c3aed' : '#64748b',
-                border: activeRole === 'admin' ? '1px solid #ddd6fe' : 'none',
-                boxShadow: activeRole === 'admin' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
-                padding: '6px 14px',
-                borderRadius: '8px',
-                fontSize: '0.78rem',
-                fontWeight: '600',
+          {/* Active Role Dedicated Portal Badge (Eliminates cross-role confusion) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {activeRole === 'merchant' && (
+              <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <ShieldCheck size={15} /> Admin Surveillance
-            </button>
-            <button 
-              onClick={() => setActiveRole('merchant')}
-              style={{
-                backgroundColor: activeRole === 'merchant' ? '#ffffff' : 'transparent',
-                color: activeRole === 'merchant' ? '#2563eb' : '#64748b',
-                border: activeRole === 'merchant' ? '1px solid #bfdbfe' : 'none',
-                boxShadow: activeRole === 'merchant' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
+                gap: '8px',
+                backgroundColor: '#eff6ff',
+                color: '#1d4ed8',
+                border: '1px solid #bfdbfe',
                 padding: '6px 14px',
                 borderRadius: '8px',
-                fontSize: '0.78rem',
-                fontWeight: '600',
+                fontSize: '0.82rem',
+                fontWeight: '700'
+              }}>
+                <Scale size={16} color="#2563eb" />
+                <span>Shop Owner Portal (Trader)</span>
+              </div>
+            )}
+            {activeRole === 'inspector' && (
+              <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <Scale size={15} /> Shop Owner
-            </button>
-            <button 
-              onClick={() => setActiveRole('inspector')}
-              style={{
-                backgroundColor: activeRole === 'inspector' ? '#ffffff' : 'transparent',
-                color: activeRole === 'inspector' ? '#059669' : '#64748b',
-                border: activeRole === 'inspector' ? '1px solid #a7f3d0' : 'none',
-                boxShadow: activeRole === 'inspector' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
+                gap: '8px',
+                backgroundColor: '#ecfdf5',
+                color: '#047857',
+                border: '1px solid #a7f3d0',
                 padding: '6px 14px',
                 borderRadius: '8px',
-                fontSize: '0.78rem',
-                fontWeight: '600',
+                fontSize: '0.82rem',
+                fontWeight: '700'
+              }}>
+                <UserCheck size={16} color="#059669" />
+                <span>LMO Field Inspector Portal (Pune Central)</span>
+              </div>
+            )}
+            {activeRole === 'admin' && (
+              <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <UserCheck size={15} /> LMO Inspector
-            </button>
-            <button 
-              onClick={() => { setActiveRole('public'); handleVerifyCert(certQuery); }}
-              style={{
-                backgroundColor: activeRole === 'public' ? '#ffffff' : 'transparent',
-                color: activeRole === 'public' ? '#0f172a' : '#64748b',
-                border: activeRole === 'public' ? '1px solid #cbd5e1' : 'none',
-                boxShadow: activeRole === 'public' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
+                gap: '8px',
+                backgroundColor: '#faf5ff',
+                color: '#6b21a8',
+                border: '1px solid #ddd6fe',
                 padding: '6px 14px',
                 borderRadius: '8px',
-                fontSize: '0.78rem',
-                fontWeight: '600',
+                fontSize: '0.82rem',
+                fontWeight: '700'
+              }}>
+                <ShieldCheck size={16} color="#7c3aed" />
+                <span>State Controller Surveillance Portal</span>
+              </div>
+            )}
+            {activeRole === 'public' && (
+              <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <QrCode size={15} /> Citizen QR
-            </button>
+                gap: '8px',
+                backgroundColor: '#f8fafc',
+                color: '#0f172a',
+                border: '1px solid #cbd5e1',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '0.82rem',
+                fontWeight: '700'
+              }}>
+                <QrCode size={16} color="#0f172a" />
+                <span>Public Citizen Verification Portal</span>
+              </div>
+            )}
           </div>
 
-          {/* Current User Chip & Switch Role / Logout */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Current User Chip, Workflow Guide & Switch Role / Logout */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => setWorkflowGuideOpen(true)}
+              title="Open full workflow architecture guide for viva/demo"
+              style={{
+                backgroundColor: '#f1f5f9',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                color: '#334155',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                cursor: 'pointer'
+              }}
+            >
+              <Info size={14} color="#2563eb" /> Guide
+            </button>
+
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -523,18 +534,19 @@ export default function App() {
             <button
               type="button"
               onClick={() => setCurrentUser(null)}
-              title="Logout and select another role"
+              title="Logout and switch persona"
               style={{
                 backgroundColor: '#ffffff',
                 border: '1px solid #e2e8f0',
                 borderRadius: '8px',
-                padding: '6px 10px',
+                padding: '6px 12px',
                 fontSize: '0.75rem',
                 fontWeight: '600',
-                color: '#64748b',
+                color: '#dc2626',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px'
+                gap: '5px',
+                cursor: 'pointer'
               }}
             >
               <LogOut size={13} /> Switch Role
@@ -560,12 +572,46 @@ export default function App() {
       {/* Main Container */}
       <main style={{ maxWidth: '1280px', margin: '20px auto', padding: '0 20px', flex: 1, width: '100%' }}>
         
-        {/* INTERACTIVE WORKFLOW GUIDE (Visual 5-Step Lifecycle Simulator) */}
-        <WorkflowGuide 
-          currentRole={activeRole} 
-          onNavigateStep={handleNavigateStep} 
-          chainValid={chainStatus?.valid !== false}
-        />
+        {/* Optional Workflow Guide Modal (Accessible on-demand for viva/demonstration without cluttering active role view) */}
+        {workflowGuideOpen && (
+          <div className="modal-backdrop">
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '14px',
+              maxWidth: '920px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>
+                    VerifyMET+ Architecture & 5-Step Lifecycle Guide
+                  </h3>
+                  <p style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    Complete e-governance & anti-fraud flow under Legal Metrology Act, 2009
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setWorkflowGuideOpen(false)}
+                  style={{ background: 'none', border: 'none', fontSize: '1.4rem', color: '#64748b', cursor: 'pointer' }}
+                >
+                  ×
+                </button>
+              </div>
+              <WorkflowGuide 
+                currentRole={activeRole} 
+                onNavigateStep={(role, step) => {
+                  setWorkflowGuideOpen(false);
+                  handleNavigateStep(role, step);
+                }} 
+                chainValid={chainStatus?.valid !== false}
+              />
+            </div>
+          </div>
+        )}
 
         {/* ========================================================================= */}
         {/* VIEW 1: STATE ADMIN & INTEGRITY DASHBOARD                                 */}
